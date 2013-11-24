@@ -10,20 +10,25 @@ if [ ! -d "$SKYDRIVED_USER_DIR" ]; then
 	mkdir $SKYDRIVED_USER_DIR
 fi
 
-if [ -f "$SKYDRIVED_USER_DIR/$SKYDRIVED_USER_CONF" ]
+if [ -f "$SKYDRIVED_CONF_FULLPATH" ]
 then
 	echo "The configuration file for SkyDrive-d already exists."
-	read -n 1 -r -p "Would you like to overwrite the current data [y/n]? "
+	read -n 1 -r -p "Would you like to overwrite the current configurations [y/n]? "
 	echo ""	#initiate a new line.
 	if [[ $REPLY =~ ^[Yy]$ ]]
 	then
-		rm -vf "$SKYDRIVED_USER_DIR/$SKYDRIVED_USER_CONF"
+		rm -vf "$HOMEDIR/.lcrc"
+		echo "client:" >> "$HOMEDIR/.lcrc"
+		echo -e "  id: 000000004010C916" >> "$HOMEDIR/.lcrc"
+		echo -e "  secret: PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi" >> "$HOMEDIR/.lcrc"
+		rm -vf "$SKYDRIVED_CONF_FULLPATH"
+		read -r -p "Specify the directory to synchronize with SkyDrive [$HOMEDIR/SkyDrive][ENTER]: " SKYDRIVE_DIR
+		echo "The directory \"$SKYDRIVE_DIR\" will be in sync with your SkyDrive."
+		echo "SKYDRIVE_DIR=$SKYDRIVE_DIR" >> $SKYDRIVED_CONF_FULLPATH
 	else
 		echo "The current configuration is kept."
-		echo "Setup will exit."
-		exit 0
 	fi
 fi
 
-echo "WINDOWS_LIVE_ID=123@346.com" > $SKYDRIVED_CONF_FULLPATH
-echo "SKYDRIVED_MONITOR_DIR=$HOMEDIR/SkyDrive" >> $SKYDRIVED_CONF_FULLPATH
+echo "Setup will now synchronize the local repository with SkyDrive server..."
+./utils.sh fullSync
