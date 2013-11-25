@@ -13,6 +13,7 @@ install_pkg() {
 install_pkg python-pip
 install_pkg libyaml-dev
 install_pkg python-yaml
+install_pkg python-dateutil
 
 # Note that to install stuff in system-wide PATH and site-packages, 
 # elevated privileges are often required.
