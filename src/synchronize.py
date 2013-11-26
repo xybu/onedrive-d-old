@@ -17,7 +17,35 @@ class FileEntry:
 		#sample: 2013-10-31T02:58:31+0000
 		self.ctime = calendar.timegm(parser.parse(ctime).utctimetuple())
 		self.mtime = calendar.timegm(parser.parse(mtime).utctimetuple())
-		
+	
+	def sync(self):
+		fPath = self.localroot + self.path + self.filename
+		if os.path.exists(fPath):
+			if os.path.isfile(fPath):
+				fMtime = os.stat(fPath).st_mtime
+				print "File \"" + fPath + "\" has fMtime " + str(os.stat(fPath).st_mtime)
+				print "File \"" + fPath + "\" has mtime " + str(self.mtime)
+				if fMtime > self.mtime:
+					print "Local file \""+fPath+"\" is newer. Upload it..."
+					self.upload()
+				elif fMtime < self.mtime:
+					print "Local file \""+fPath+"\" is older. Download it..."
+					self.download()
+				else:
+					print fPath + " wasn't changed. Skip it."
+			else:
+				print fPath + " is not a file!"
+		else:
+			#TODO: FILE DELETION?
+			print fPath + " does not exist. Download it."
+			self.download()
+	
+	def upload(self):
+		print "Uploading file \" " + self.localroot + self.path + self.filename + "\""
+		upProc = subprocess.Popen(['skydrive-cli', 'put', self.path + self.filename, self.path], cwd="" + self.localroot + "", stdout=subprocess.PIPE)
+		result = upProc.communicate()[0]
+		print result
+	
 	def download(self):
 		print "Writing to file \" " + self.localroot + self.path + self.filename + "\""
 		f = open(self.localroot + self.path + self.filename, "w")
@@ -45,7 +73,14 @@ class DirectoryEntry:
 	def getLog(self):
 		sp = subprocess.Popen(['skydrive-cli', 'ls', '--objects', self.path + self.dirname], stdout=subprocess.PIPE)
 		log = sp.communicate()[0]
-		#print log
+		#save log dump to settings folder
+		if self.path == "" and self.dirname == "":
+			logPath = "root.log"
+		else:
+			logPath = self.path.replace("/", "_") + self.dirname.replace("/", "_") + ".log"
+		fLog = open(os.path.expanduser("~/.skydrive/" + logPath), "w");
+		fLog.write(log)
+		fLog.close()
 		return log
 	
 	def sync(self):
@@ -56,9 +91,9 @@ class DirectoryEntry:
 		logMap = yaml.safe_load(log)
 
 		for entry in logMap:
-			if entry["type"] == "file" or entry["type"] == "photo" or entry["type"] == "audio":
+			if entry["type"] == "file" or entry["type"] == "photo" or entry["type"] == "audio" or entry["type"] == "video":
 				fEntry = FileEntry(self.localroot, self.path + self.dirname, entry["name"], entry["size"], entry["created_time"], entry["updated_time"])
-				fEntry.download()
+				fEntry.sync()
 			elif entry["type"] == "folder" or entry["type"] == "album":
 				print entry["name"] + " is a folder."
 				if not os.path.exists(self.localroot + self.path + self.dirname + entry["name"]):
