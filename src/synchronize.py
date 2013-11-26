@@ -5,7 +5,7 @@ import calendar
 from dateutil import parser
 
 class FileEntry:
-	def __init__(self, localroot, remotePath, filename, size, ctime, mtime):
+	def __init__(self, localroot, remotePath, filename, size, mtime):
 		if localroot != "" and localroot[-1] != "/":
 			localroot = localroot + "/"
 		if remotePath != "" and remotePath[-1] != "/":
@@ -15,7 +15,6 @@ class FileEntry:
 		self.filename = filename
 		self.size = size
 		#sample: 2013-10-31T02:58:31+0000
-		self.ctime = calendar.timegm(parser.parse(ctime).utctimetuple())
 		self.mtime = calendar.timegm(parser.parse(mtime).utctimetuple())
 	
 	def sync(self):
@@ -23,8 +22,8 @@ class FileEntry:
 		if os.path.exists(fPath):
 			if os.path.isfile(fPath):
 				fMtime = os.stat(fPath).st_mtime
-				print "File \"" + fPath + "\" has fMtime " + str(os.stat(fPath).st_mtime)
-				print "File \"" + fPath + "\" has mtime " + str(self.mtime)
+				#print "File \"" + fPath + "\" has fMtime " + str(os.stat(fPath).st_mtime)
+				#print "File \"" + fPath + "\" has mtime " + str(self.mtime)
 				if fMtime > self.mtime:
 					print "Local file \""+fPath+"\" is newer. Upload it..."
 					self.upload()
@@ -48,14 +47,15 @@ class FileEntry:
 	
 	def download(self):
 		print "Writing to file \" " + self.localroot + self.path + self.filename + "\""
+		print "Downloading file \"" + self.path + self.filename + "\""
 		f = open(self.localroot + self.path + self.filename, "w")
-		print "Downloading from file \"" + self.path + self.filename + "\""
-		downProc = subprocess.Popen(['skydrive-cli', 'get', self.path + self.filename], stdout=f)
+		downProc = subprocess.call(['skydrive-cli', 'get', self.path + self.filename], stdout=f)
+		#os.waitpid(downProc.pid, 0)
 		f.close()
-		os.utime(self.localroot + self.path + self.filename, (self.ctime, self.mtime))
+		os.utime(self.localroot + self.path + self.filename, (self.mtime, self.mtime))
 
 class DirectoryEntry:
-	def __init__(self, root, path, dirname, ctime = "", mtime = ""):
+	def __init__(self, root, path, dirname, mtime = ""):
 		if root != "" and root[-1] != "/":
 			root = root + "/"
 		if path != "" and path[-1] != "/":
@@ -65,8 +65,6 @@ class DirectoryEntry:
 		self.localroot = root
 		self.path = path
 		self.dirname = dirname
-		if ctime != "":
-			self.ctime = calendar.timegm(parser.parse(ctime).utctimetuple())
 		if mtime != "":
 			self.mtime = calendar.timegm(parser.parse(mtime).utctimetuple())
 	
@@ -92,7 +90,7 @@ class DirectoryEntry:
 
 		for entry in logMap:
 			if entry["type"] == "file" or entry["type"] == "photo" or entry["type"] == "audio" or entry["type"] == "video":
-				fEntry = FileEntry(self.localroot, self.path + self.dirname, entry["name"], entry["size"], entry["created_time"], entry["updated_time"])
+				fEntry = FileEntry(self.localroot, self.path + self.dirname, entry["name"], entry["size"], entry["client_updated_time"])
 				fEntry.sync()
 			elif entry["type"] == "folder" or entry["type"] == "album":
 				print entry["name"] + " is a folder."
