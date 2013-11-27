@@ -32,8 +32,7 @@ then
 		echo -e "client:" >> "$HOMEDIR/.lcrc"
 		echo -e "  id: 000000004010C916" >> "$HOMEDIR/.lcrc"
 		echo -e "  secret: PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi" >> "$HOMEDIR/.lcrc"
-		echo -e "settings: " >> $SKYDRIVED_CONF_PATH
-		echo -e "  root: $SKYDRIVE_DIR" >> $SKYDRIVED_CONF_PATH
+		echo -e "rootPath: $SKYDRIVE_DIR" >> $SKYDRIVED_CONF_PATH
 	else
 		echo "The current configurations were kept."
 	fi
