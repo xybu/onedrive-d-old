@@ -1,3 +1,5 @@
+#!/bin/bash
+
 SKYDRIVED_USER_DIR=".skydrive"
 SKYDRIVED_USER_CONF="user.conf"
 

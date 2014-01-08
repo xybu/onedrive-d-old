@@ -1,3 +1,5 @@
+#!/bin/bash
+
 install_pkg() {
 	echo "Checking if package \"$1\" is installed..."
 	query=`dpkg-query -l $1`
