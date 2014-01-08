@@ -1,12 +1,13 @@
 install_pkg() {
 	echo "Checking if package \"$1\" is installed..."
-	query=`dpkg-query -l $1`
+	dpkg-query -l $1 > tmp.txt
 	if [ $? -eq 1 ]; then
 		echo "Installing package $1..."
 		sudo apt-get -y install $1
 	else
 		echo "Package $1 is installed. Skip this step."
 	fi
+	rm tmp.txt
 }
 
 install_pkg python-pip
