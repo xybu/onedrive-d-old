@@ -1,0 +1,76 @@
+#!/bin/bash
+
+# skydrive-d
+# 
+# SkyDrive daemon application
+# 
+# @author	Xiangyu Bu
+# @update	Jan 08, 2014
+
+# Application configuration directory
+SKYDRIVED_CONF_PATH=`eval "echo ~/.skydrive"`
+
+# skydrive-d configuration file path
+SKYDRIVED_CONF_FILE="$SKYDRIVED_CONF_PATH/user.conf"
+
+# skydrive-d latest log
+SKYDRIVED_CONF_LOG_NEW="$SKYDRIVED_CONF_PATH/new_run.log"
+
+# skydrive-d log from last run
+SKYDRIVED_CONF_LOG_LAST="$SKYDRIVED_CONF_PATH/last_run.log"
+
+# skydrive-d root path to sync
+SKYDRIVED_ROOT_PATH=`grep "rootPath:" $SKYDRIVED_CONF_FILE | cut -d ' ' -f2`
+
+# function action_deep_sync
+# entry point for deep sync
+exec_deep_sync() {
+	echo "Deep synchronization not done yet..."
+	# python synchronize.py
+}
+
+# function exec_skydrive_mv $from $to
+# move the path from $from to $to
+exec_skydrive_mvdir() {
+	echo "Directory $1 moved to $2."
+	# cmd to exec
+}
+
+# more actions TBA.
+
+# At first run, perform partial or deep sync
+if [ -f "$SKYDRIVE_CONF_LOG_NEW" ]
+then
+	mv "$SKYDRIVE_CONF_LOG_NEW" "$SKYDRIVED_CONF_LOG_LAST"
+	ls $SKYDRIVED_ROOT_PATH -Rl --time-style "+%Y-%m-%dT%H:%M:%S"
+else
+	echo "No log exists. Do you want to make a deep sync between SkyDrive server and your local directory \"$SKYDRIVED_ROOT_PATH\"?"
+	echo " * Files that don't exist locally will be downloaded."
+	echo " * Local Files that are newer than the server version will be uploaded."
+	echo " * Local Files that are older than the server version will be replaced by the server version."
+	read -n 1 -r -p "Proceed? [y/n] "
+	echo ""	# initiate a new line.
+	if [[ $REPLY =~ ^[Yy]$ ]] ; then
+		exec_deep_sync
+	fi
+fi
+
+moveFrom_buffer=""
+
+# Use inotifywait to monitor file system changes
+nohup inotifywait -e unmount,close_write,create,delete,delete_self,move --format "%e %f %w" -mr $SKYDRIVED_ROOT_PATH | 
+while IFS=' ' read event directory file
+#while read line
+do
+	echo "$event $directory $file"
+	case "$event" in
+		"MOVED_FROM,ISDIR" )
+			moveFrom_buffer="$file$directory"
+			;;
+		"MOVED_TO,ISDIR" )
+			# execute the dir move function
+			exec_skydrive_mvdir $eventBuffer $file$directory
+			moveFrom_buffer="" # clear buffer
+			;;
+	esac
+done
