@@ -8,7 +8,7 @@
 
 import sys, os
 import yaml
-import entries
+from entries import * 
 
 settingsFile = open(os.path.expanduser("~/.skydrive/user.conf"), "r");
 settingsMap = yaml.safe_load(settingsFile)
