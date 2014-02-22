@@ -77,6 +77,10 @@ if [ "$reset_conf_flag" -eq 1 ] ; then
 	rm -vf "$HOMEDIR/.lcrc" "$SKYDRIVED_CONF_FILE"
 	echo "Specify the directory to synchronize with SkyDrive [$HOMEDIR/SkyDrive][ENTER]:"
 	read -r SKYDRIVE_DIR
+	#If no user input, lets default to home directory
+	if [ -z $SKYDRIVE_DIR ]; then
+		SKYDRIVE_DIR=$HOMEDIR/SkyDrive
+	fi
 	if_make_dir $SKYDRIVE_DIR
 	build_lcrc $SKYDRIVE_DIR
 else
@@ -105,7 +109,7 @@ read -n 1 -r -p "Would you like to start skydrive-d now? [y/n] "
 echo ""
 if [[ $REPLY =~ ^[Yy]$ ]]
 then
-	./skydrive-d
+	./src/skydrive-d
 else
 	echo -e "You choose to start skydrive-d later."
 fi
