@@ -105,7 +105,7 @@ read -n 1 -r -p "Would you like to start skydrive-d now? [y/n] "
 echo ""
 if [[ $REPLY =~ ^[Yy]$ ]]
 then
-	./skydrive-d
+	./src/skydrive-d
 else
 	echo -e "You choose to start skydrive-d later."
 fi
