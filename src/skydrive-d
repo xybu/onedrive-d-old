@@ -72,5 +72,11 @@ do
 			exec_skydrive_mvdir $eventBuffer $file$directory
 			moveFrom_buffer="" # clear buffer
 			;;
+		"CLOSE_WRITE,CLOSE" )
+			# file data changes
+			;;
+		"DELETE" )
+			# file deletion
+			;;
 	esac
 done
