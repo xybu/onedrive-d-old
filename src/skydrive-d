@@ -26,7 +26,7 @@ SKYDRIVED_ROOT_PATH=`grep "rootPath:" $SKYDRIVED_CONF_FILE | cut -d ' ' -f2`
 # entry point for deep sync
 exec_deep_sync() {
 	echo "Deep synchronization not done yet..."
-	# python synchronize.py
+	python ./synchronize.py
 }
 
 # function exec_skydrive_mv $from $to
