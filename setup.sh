@@ -8,11 +8,9 @@
 # @author	Xiangyu Bu
 # @update	Jan 08, 2014
 
-# Home Directory
-HOMEDIR=`eval echo ~${SUDO_USER}`
 
 # Application configuration directory
-SKYDRIVED_CONF_PATH="$HOMEDIR/.skydrive"
+SKYDRIVED_CONF_PATH="$HOME/.skydrive"
 
 # skydrive-d configuration file path
 SKYDRIVED_CONF_FILE="$SKYDRIVED_CONF_PATH/user.conf"
@@ -20,10 +18,10 @@ SKYDRIVED_CONF_FILE="$SKYDRIVED_CONF_PATH/user.conf"
 # function build_lcrc $path
 # writes the lcrc configuration file
 build_lcrc() {
-	echo "The directory \"$1\" will be in sync with your SkyDrive."
-	echo -e "client:" >> "$HOMEDIR/.lcrc"
-	echo -e "  id: 000000004010C916" >> "$HOMEDIR/.lcrc"
-	echo -e "  secret: PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi" >> "$HOMEDIR/.lcrc"
+	echo "The directory \"$1\" will be in sync with your OneDrive."
+	echo -e "client:" >> "$HOME/.lcrc"
+	echo -e "  id: 000000004010C916" >> "$HOME/.lcrc"
+	echo -e "  secret: PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi" >> "$HOME/.lcrc"
 	echo -e "rootPath: $1" >> $SKYDRIVED_CONF_FILE
 }
 
@@ -74,12 +72,12 @@ fi
 
 # rebuild conf file if needed
 if [ "$reset_conf_flag" -eq 1 ] ; then
-	rm -vf "$HOMEDIR/.lcrc" "$SKYDRIVED_CONF_FILE"
-	echo "Specify the directory to synchronize with SkyDrive [$HOMEDIR/SkyDrive][ENTER]:"
+	rm -vf "$HOME/.lcrc" "$SKYDRIVED_CONF_FILE"
+	echo "Specify the directory to synchronize with SkyDrive [$HOME/SkyDrive][ENTER]:"
 	read -r SKYDRIVE_DIR
 	#If no user input, lets default to home directory
 	if [ -z $SKYDRIVE_DIR ]; then
-		SKYDRIVE_DIR=$HOMEDIR/SkyDrive
+		SKYDRIVE_DIR=$HOME/SkyDrive
 	fi
 	if_make_dir $SKYDRIVE_DIR
 	build_lcrc $SKYDRIVE_DIR

@@ -8,7 +8,7 @@
 # @update	Jan 08, 2014
 
 # Application configuration directory
-SKYDRIVED_CONF_PATH=`eval "echo ~/.skydrive"`
+SKYDRIVED_CONF_PATH="$HOME/.skydrive"
 
 # skydrive-d configuration file path
 SKYDRIVED_CONF_FILE="$SKYDRIVED_CONF_PATH/user.conf"
