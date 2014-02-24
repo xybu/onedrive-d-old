@@ -85,7 +85,7 @@ class DirectoryEntry:
 			logPath = "root.log"
 		else:
 			logPath = self.path.replace("/", "_") + self.dirname.replace("/", "_") + ".log"
-		fLog = open(os.path.expanduser("~/.skydrive/" + logPath), "w");
+		fLog = open(os.path.expanduser("~/.onedrive/" + logPath), "w");
 		fLog.write(log)
 		fLog.close()
 		return log

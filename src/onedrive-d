@@ -1,26 +1,26 @@
 #!/bin/bash
 
-# skydrive-d
+# onedrive-d
 # 
-# SkyDrive daemon application
+# OneDrive daemon application
 # 
 # @author	Xiangyu Bu
 # @update	Jan 08, 2014
 
 # Application configuration directory
-SKYDRIVED_CONF_PATH="$HOME/.skydrive"
+ONEDRIVED_CONF_PATH="$HOME/.onedrive"
 
-# skydrive-d configuration file path
-SKYDRIVED_CONF_FILE="$SKYDRIVED_CONF_PATH/user.conf"
+# onedrive-d configuration file path
+ONEDRIVED_CONF_FILE="$ONEDRIVED_CONF_PATH/user.conf"
 
-# skydrive-d latest log
-SKYDRIVED_CONF_LOG_NEW="$SKYDRIVED_CONF_PATH/new_run.log"
+# onedrive-d latest log
+ONEDRIVED_CONF_LOG_NEW="$ONEDRIVED_CONF_PATH/new_run.log"
 
 # skydrive-d log from last run
-SKYDRIVED_CONF_LOG_LAST="$SKYDRIVED_CONF_PATH/last_run.log"
+ONEDRIVED_CONF_LOG_LAST="$ONEDRIVED_CONFd_PATH/last_run.log"
 
-# skydrive-d root path to sync
-SKYDRIVED_ROOT_PATH=`grep "rootPath:" $SKYDRIVED_CONF_FILE | cut -d ' ' -f2`
+# onedrive-d root path to sync
+ONEDRIVED_ROOT_PATH=`grep "rootPath:" $ONEDRIVED_CONF_FILE | cut -d ' ' -f2`
 
 # function action_deep_sync
 # entry point for deep sync
@@ -29,9 +29,9 @@ exec_deep_sync() {
 	python ./synchronize.py
 }
 
-# function exec_skydrive_mv $from $to
+# function exec_onedrive_mv $from $to
 # move the path from $from to $to
-exec_skydrive_mvdir() {
+exec_onedrive_mvdir() {
 	echo "Directory $1 moved to $2."
 	# cmd to exec
 }
@@ -39,12 +39,12 @@ exec_skydrive_mvdir() {
 # more actions TBA.
 
 # At first run, perform partial or deep sync
-if [ -f "$SKYDRIVE_CONF_LOG_NEW" ]
+if [ -f "$ONEDRIVE_CONF_LOG_NEW" ]
 then
-	mv "$SKYDRIVE_CONF_LOG_NEW" "$SKYDRIVED_CONF_LOG_LAST"
-	ls $SKYDRIVED_ROOT_PATH -Rl --time-style "+%Y-%m-%dT%H:%M:%S"
+	mv "$ONEDRIVE_CONF_LOG_NEW" "$ONEDRIVED_CONF_LOG_LAST"
+	ls $ONEDRIVED_ROOT_PATH -Rl --time-style "+%Y-%m-%dT%H:%M:%S"
 else
-	echo "No log exists. Do you want to make a deep sync between SkyDrive server and your local directory \"$SKYDRIVED_ROOT_PATH\"?"
+	echo "No log exists. Do you want to make a deep sync between OneDrive server and your local directory \"$ONEDRIVED_ROOT_PATH\"?"
 	echo " * Files that don't exist locally will be downloaded."
 	echo " * Local Files that are newer than the server version will be uploaded."
 	echo " * Local Files that are older than the server version will be replaced by the server version."
@@ -58,7 +58,7 @@ fi
 moveFrom_buffer=""
 
 # Use inotifywait to monitor file system changes
-nohup inotifywait -e unmount,close_write,create,delete,delete_self,move --format "%e %f %w" -mr $SKYDRIVED_ROOT_PATH | 
+nohup inotifywait -e unmount,close_write,create,delete,delete_self,move --format "%e %f %w" -mr $ONEDRIVED_ROOT_PATH | 
 while IFS=' ' read event directory file
 #while read line
 do
@@ -69,7 +69,7 @@ do
 			;;
 		"MOVED_TO,ISDIR" )
 			# execute the dir move function
-			exec_skydrive_mvdir $eventBuffer $file$directory
+			exec_onedrive_mvdir $eventBuffer $file$directory
 			moveFrom_buffer="" # clear buffer
 			;;
 		"CLOSE_WRITE,CLOSE" )
