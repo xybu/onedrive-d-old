@@ -8,23 +8,22 @@
 # @author	Xiangyu Bu
 # @update	Jan 08, 2014
 
-# Home Directory
-HOMEDIR=`eval echo ~${SUDO_USER}`
 
 # Application configuration directory
-SKYDRIVED_CONF_PATH="$HOMEDIR/.skydrive"
+ONEDRIVED_CONF_PATH="$HOME/.onedrive"
+
 
 # skydrive-d configuration file path
-SKYDRIVED_CONF_FILE="$SKYDRIVED_CONF_PATH/user.conf"
+ONEDRIVED_CONF_FILE="$ONEDRIVED_CONF_PATH/user.conf"
 
 # function build_lcrc $path
 # writes the lcrc configuration file
 build_lcrc() {
-	echo "The directory \"$1\" will be in sync with your SkyDrive."
-	echo -e "client:" >> "$HOMEDIR/.lcrc"
-	echo -e "  id: 000000004010C916" >> "$HOMEDIR/.lcrc"
-	echo -e "  secret: PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi" >> "$HOMEDIR/.lcrc"
-	echo -e "rootPath: $1" >> $SKYDRIVED_CONF_FILE
+	echo "The directory \"$1\" will be in sync with your OneDrive."
+	echo -e "client:" >> "$HOME/.lcrc"
+	echo -e "  id: 000000004010C916" >> "$HOME/.lcrc"
+	echo -e "  secret: PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi" >> "$HOME/.lcrc"
+	echo -e "rootPath: $1" >> $ONEDRIVED_CONF_FILE
 }
 
 # function install_prerequisites
@@ -56,11 +55,11 @@ exec_cli_auth() {
 install_prerequisites
 
 # make conf dir
-if_make_dir $SKYDRIVED_CONF_PATH
+if_make_dir $ONEDRIVED_CONF_PATH
 
 # check if configuration file needs to be rebuilt
 reset_conf_flag=0
-if [ -f "$SKYDRIVED_CONF_FILE" ]
+if [ -f "$ONEDRIVED_CONF_FILE" ]
 then
 	echo "The configuration file for skydrive-d already exists."
 	read -n 1 -r -p "Would you like to overwrite the current configurations? [y/n] "
@@ -74,15 +73,15 @@ fi
 
 # rebuild conf file if needed
 if [ "$reset_conf_flag" -eq 1 ] ; then
-	rm -vf "$HOMEDIR/.lcrc" "$SKYDRIVED_CONF_FILE"
-	echo "Specify the directory to synchronize with SkyDrive [$HOMEDIR/SkyDrive][ENTER]:"
-	read -r SKYDRIVE_DIR
+	rm -vf "$HOME/.lcrc" "$ONEDRIVED_CONF_FILE"
+	echo "Specify the directory to synchronize with OneDrive [$HOME/OneDrive][ENTER]:"
+	read -r ONEDRIVE_DIR
 	#If no user input, lets default to home directory
-	if [ -z $SKYDRIVE_DIR ]; then
-		SKYDRIVE_DIR=$HOMEDIR/SkyDrive
+	if [ -z $ONEDRIVE_DIR ]; then
+		ONEDRIVE_DIR=$HOME/OneDrive
 	fi
-	if_make_dir $SKYDRIVE_DIR
-	build_lcrc $SKYDRIVE_DIR
+	if_make_dir $ONEDRIVE_DIR
+	build_lcrc $ONEDRIVE_DIR
 else
 	echo "The current configurations were kept."
 fi
@@ -105,13 +104,13 @@ else
 fi
 
 # start daemon
-read -n 1 -r -p "Would you like to start skydrive-d now? [y/n] "
+read -n 1 -r -p "Would you like to start onedrive-d now? [y/n] "
 echo ""
 if [[ $REPLY =~ ^[Yy]$ ]]
 then
 	cd ./src/
-	./skydrive-d
+	./onedrive-d
 	:
 else
-	echo -e "You choose to start skydrive-d later."
+	echo -e "You choose to start onedrive-d later."
 fi

@@ -14,3 +14,5 @@
 
 # Temporary Backup files
 *~
+
+*.pyc

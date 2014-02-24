@@ -10,11 +10,11 @@ import sys, os
 import yaml
 from entries import * 
 
-settingsFile = open(os.path.expanduser("~/.skydrive/user.conf"), "r");
+settingsFile = open(os.path.expanduser("~/.onedrive/user.conf"), "r");
 settingsMap = yaml.safe_load(settingsFile)
 settingsFile.close()
 
-SKYDRIVE_ROOT_DIR = settingsMap["rootPath"] + "/"
+ONEDRIVE_ROOT_DIR = settingsMap["rootPath"] + "/"
 
-rootEntry = DirectoryEntry(SKYDRIVE_ROOT_DIR, "", "")
+rootEntry = DirectoryEntry(ONEDRIVE_ROOT_DIR, "", "")
 rootEntry.sync()
