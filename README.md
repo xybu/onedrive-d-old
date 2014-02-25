@@ -1,8 +1,6 @@
 onedrive-d
 ==================
 
-----
-
 Description
 -----------
 This project intends to develop a OneDrive (formerly SkyDrive) daemon on (X)ubuntu with mainly Bash script.
