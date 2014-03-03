@@ -32,7 +32,17 @@ exec_deep_sync() {
 # function exec_onedrive_mv $from $to
 # move the path from $from to $to
 exec_onedrive_mvdir() {
-	echo "Directory $1 moved to $2."
+	echo "should do Directory $1 moved to $2."
+	# cmd to exec
+}
+
+exec_onedrive_rmdir() {
+	echo "should delete directory $1 from $2."
+	# cmd to exec
+}
+
+exec_onedrive_rm() {
+	echo "should delete file $1 from $2."
 	# cmd to exec
 }
 
@@ -60,16 +70,17 @@ moveFrom_buffer=""
 # Use inotifywait to monitor file system changes
 nohup inotifywait -e unmount,close_write,create,delete,delete_self,move --format "%e %f %w" -mr $ONEDRIVED_ROOT_PATH | 
 while IFS=' ' read event directory file
-#while read line
+# while read line
 do
-	echo "$event $directory $file"
+	# the fields may not be exactly "event dir file"
+	echo "$event $f1 $f2"
 	case "$event" in
 		"MOVED_FROM,ISDIR" )
-			moveFrom_buffer="$file$directory"
+			moveFrom_buffer="$f2$f1"
 			;;
 		"MOVED_TO,ISDIR" )
 			# execute the dir move function
-			exec_onedrive_mvdir $eventBuffer $file$directory
+			exec_onedrive_mvdir $eventBuffer $f2$f1
 			moveFrom_buffer="" # clear buffer
 			;;
 		"CLOSE_WRITE,CLOSE" )
@@ -77,6 +88,11 @@ do
 			;;
 		"DELETE" )
 			# file deletion
+			exec_onedrive_rm $f1 $f2
+			;;
+		"DELETE,ISDIR" )
+			# delete a directory
+			exec_onedrive_rmdir $f1 $f2
 			;;
 	esac
 done

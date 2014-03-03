@@ -6,8 +6,14 @@
 # sudo permission required.
 # 
 # @author	Xiangyu Bu
-# @update	Jan 08, 2014
+# @update	Mar 02, 2014
 
+
+# The actual user who executes the script
+ONEDRIVED_ACTUAL_USER="$SUDO_USER"
+if [ "${#ONEDRIVED_ACTUAL_USER}" -eq "0" ]; then
+	ONEDRIVED_ACTUAL_USER="$USER"
+fi
 
 # Application configuration directory
 ONEDRIVED_CONF_PATH="$HOME/.onedrive"
@@ -23,6 +29,7 @@ build_lcrc() {
 	echo -e "client:" >> "$HOME/.lcrc"
 	echo -e "  id: 000000004010C916" >> "$HOME/.lcrc"
 	echo -e "  secret: PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi" >> "$HOME/.lcrc"
+	chown $ONEDRIVED_ACTUAL_USER $HOME/.lcrc
 	echo -e "rootPath: $1" >> $ONEDRIVED_CONF_FILE
 }
 
@@ -84,6 +91,7 @@ if [ "$reset_conf_flag" -eq 1 ] ; then
 	build_lcrc $ONEDRIVE_DIR
 else
 	echo "The current configurations were kept."
+	ONEDRIVE_DIR=`grep "rootPath:" $HOME/.onedrive/user.conf | cut -d ' ' -f2`
 fi
 
 # ask for authentication
@@ -103,14 +111,21 @@ else
 	echo -e "You can execute the command \"skydrive-cli auth\" to authentication later."
 fi
 
+if_make_dir $ONEDRIVE_DIR
+
+chown -R $ONEDRIVED_ACTUAL_USER $ONEDRIVE_DIR
+chown -R $ONEDRIVED_ACTUAL_USER $ONEDRIVED_CONF_PATH
+
 # start daemon
 read -n 1 -r -p "Would you like to start onedrive-d now? [y/n] "
 echo ""
 if [[ $REPLY =~ ^[Yy]$ ]]
 then
+	# change the owner of the folder to the actual user, in case the user sudos
 	cd ./src/
 	./onedrive-d
 	:
 else
 	echo -e "You choose to start onedrive-d later."
+	echo "Setup was completed."
 fi
