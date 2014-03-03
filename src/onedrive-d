@@ -14,7 +14,7 @@ ONEDRIVED_CONF_PATH="$HOME/.onedrive"
 ONEDRIVED_CONF_FILE="$ONEDRIVED_CONF_PATH/user.conf"
 
 # onedrive-d latest log
-ONEDRIVED_CONF_LOG_NEW="$ONEDRIVED_CONF_PATH/new_run.log"
+ONEDRIVED_CONF_LOG_NEW="$ONEDRIVED_CONF_PATH/root.log"
 
 # skydrive-d log from last run
 ONEDRIVED_CONF_LOG_LAST="$ONEDRIVED_CONFd_PATH/last_run.log"
@@ -27,6 +27,11 @@ ONEDRIVED_ROOT_PATH=`grep "rootPath:" $ONEDRIVED_CONF_FILE | cut -d ' ' -f2`
 exec_deep_sync() {
 	echo "Deep synchronization not done yet..."
 	python ./synchronize.py
+}
+
+exec_onedrive_mkdir() {
+	echo "should make dir $1 in $2."
+	# cmd to exec
 }
 
 # function exec_onedrive_mv $from $to
@@ -49,12 +54,12 @@ exec_onedrive_rm() {
 # more actions TBA.
 
 # At first run, perform partial or deep sync
-if [ -f "$ONEDRIVE_CONF_LOG_NEW" ]
+if [ -f "$ONEDRIVED_CONF_LOG_NEW" ]
 then
-	mv "$ONEDRIVE_CONF_LOG_NEW" "$ONEDRIVED_CONF_LOG_LAST"
-	ls $ONEDRIVED_ROOT_PATH -Rl --time-style "+%Y-%m-%dT%H:%M:%S"
+	mv "$ONEDRIVED_CONF_LOG_NEW" "$ONEDRIVED_CONF_LOG_LAST"
+	# ls $ONEDRIVED_ROOT_PATH -Rl --time-style "+%Y-%m-%dT%H:%M:%S"
 else
-	echo "No log exists. Do you want to make a deep sync between OneDrive server and your local directory \"$ONEDRIVED_ROOT_PATH\"?"
+	echo "No log ($ONEDRIVED_CONF_LOG_NEW) exists. Do you want to make a deep sync between OneDrive server and your local directory \"$ONEDRIVED_ROOT_PATH\"?"
 	echo " * Files that don't exist locally will be downloaded."
 	echo " * Local Files that are newer than the server version will be uploaded."
 	echo " * Local Files that are older than the server version will be replaced by the server version."
@@ -69,7 +74,7 @@ moveFrom_buffer=""
 
 # Use inotifywait to monitor file system changes
 nohup inotifywait -e unmount,close_write,create,delete,delete_self,move --format "%e %f %w" -mr $ONEDRIVED_ROOT_PATH | 
-while IFS=' ' read event directory file
+while IFS=' ' read event f1 f2
 # while read line
 do
 	# the fields may not be exactly "event dir file"
@@ -84,7 +89,11 @@ do
 			moveFrom_buffer="" # clear buffer
 			;;
 		"CLOSE_WRITE,CLOSE" )
-			# file data changes
+			# file data changes or created
+			;;
+		"CREATE,ISDIR" )
+			# create a directory
+			exec_onedrive_mkdir $f1 $f2
 			;;
 		"DELETE" )
 			# file deletion
