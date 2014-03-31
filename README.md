@@ -15,6 +15,7 @@ Besides the `python-skydrive` base, there are two (three?) major components in t
  * A bash script daemon that will monitor the local repo, and perform on remote repo the change when there is any.
  * A bash script daemon that periodically pulls the changes from server to local (planned).
  	 * The algorithm must be carefully thought of, as there is no hook (not found yet) that lets OneDrive server tells a client there are remote changes.
+ 	 * Periodically get the most recently changed files from server API, more at http://isdk.dev.live.com/dev/isdk/ISDK.aspx?category=scenarioGroup_skyDrive&index=6
 
 Notice
 --------
