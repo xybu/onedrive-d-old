@@ -6,7 +6,7 @@ import sys, os, subprocess, yaml
 import threading, Queue, time
 
 class Task():
-	def __init__(self, type, pathType, localPath, remotePath)
+	def __init__(self, type, pathType, localPath, remotePath):
 		self.type = type
 		self.pathType = pathType
 		self.localPath = localPath
@@ -50,18 +50,20 @@ class TaskWorker(threading.Thread):
 	def mk_dir(self, ent_stat):
 		pass
 	
-	def execTask(self, t):
+	def consume(self, t):
 		print self.getName() + ": executed a task: " + t.debug()
 	
 	def run(self):
 		while True:
-			if taskQueue.empty():
+			if workers_signal_exit == 1:
+				break
+			elif taskQueue.empty():
 				time.sleep(self.WORKER_SLEEP_INTERVAL)
 			else:
 				task = taskQueue.get()
-				self.execTask(task)
 				taskQueue.task_done()
-	
+				self.consume(task)
+
 # DirScanner represents either a file entry or a dir entry in the OneDrive repository
 # it uses a single thread to process a directory entry
 class DirScanner(threading.Thread):
@@ -74,7 +76,7 @@ class DirScanner(threading.Thread):
 		threading.Thread.__init__(self)
 		self._localPath = localPath
 		self._remotePath = remotePath
-		print self.getName() + ": Start merging dir " + remotePath + " (locally at \"" + localPath + "\")"
+		print self.getName() + ": Start scanning dir " + remotePath + " (locally at \"" + localPath + "\")"
 		self.ls()
 	
 	def ls(self):
@@ -171,7 +173,8 @@ f.close()
 threads = []
 threads_lock = threading.Lock()
 
-taskQueue = Queue()
+taskQueue = Queue.Queue()
+workers_signal_exit = 0
 
 rootThread = DirScanner(CONF["rootPath"], "")
 rootThread.start()
@@ -179,11 +182,17 @@ rootThread.start()
 numOfWorkers = 4
 
 for i in range(numOfWorkers):
-     w = TaskWorker()
-	 w.start()
+	w = TaskWorker()
+	w.start()
 
-#for t in threads:
-#    t.join()
+for t in threads:
+    t.join()
+
+taskQueue.join()
+
+workers_signal_exit = 1
+
+print "Main: all done."
 
 #print "All threads are done."
 #print threads
