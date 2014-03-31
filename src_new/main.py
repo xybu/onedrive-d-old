@@ -1,14 +1,70 @@
 #!/usr/bin/python
 
-# Merge local and remote OneDrive repo
 # Warning: Rely heavily on system time and if the timestamp is screwed there may be unwanted file deletions.
 
 import sys, os, subprocess, yaml
-import threading
+import threading, Queue, time
 
-# OneDriveThread represents either a file entry or a dir entry in the OneDrive repository
+class Task():
+	def __init__(self, type, pathType, localPath, remotePath)
+		self.type = type
+		self.pathType = pathType
+		self.localPath = localPath
+		self.remotePath = remotePath
+	
+	def type(self):
+		return self.type
+	
+	def pathType(self):
+		return self.pathType
+	
+	def localPath(self):
+		return self.localPath
+	
+	def remotePath(self):
+		return self.remotePath
+	
+	def debug(self):
+		return "type=" + self.type + " | pathType=" + self.pathType + " | localPath=" + self.localPath + " | remotePath=" + self.remotePath
+	
+# TaskWorker class builds the consumer threads of the task queue
+class TaskWorker(threading.Thread):
+	WORKER_SLEEP_INTERVAL = 2 # in seconds
+	
+	def __init__(self):
+		threading.Thread.__init__(self)
+	
+	# download a file to localPath
+	def get_file(self, entry):
+		pass
+	
+	# upload a file to remotePath
+	def put_file(self, entry):
+		pass
+	
+	# remove a file from remotePath
+	def rm_file(self, entry):
+		pass
+	
+	# make a dir to remotePath
+	def mk_dir(self, ent_stat):
+		pass
+	
+	def execTask(self, t):
+		print self.getName() + ": executed a task: " + t.debug()
+	
+	def run(self):
+		while True:
+			if taskQueue.empty():
+				time.sleep(self.WORKER_SLEEP_INTERVAL)
+			else:
+				task = taskQueue.get()
+				self.execTask(task)
+				taskQueue.task_done()
+	
+# DirScanner represents either a file entry or a dir entry in the OneDrive repository
 # it uses a single thread to process a directory entry
-class OneDriveThread(threading.Thread):
+class DirScanner(threading.Thread):
 	_raw_log = []
 	_ent_list = []
 	_remotePath = ""
@@ -56,40 +112,24 @@ class OneDriveThread(threading.Thread):
 			if os.path.exists(self._localPath + "/" + entry["name"]):
 				print self.getName() + ": Oops, " + self._localPath + "/" + entry["name"] + " exists."
 				# do some merge
-				self.checkout(entry)
+				self.checkout(entry, True)
 				# after sync-ing
 				del self._ent_list[self._ent_list.index(entry["name"])] # remove the ent from untouched list
 			else:
 				print self.getName() + ": Wow, " + self._localPath + "/" + entry["name"] + " does not exist."
-				self.checkout(entry)
+				self.checkout(entry, False)
 		
 		self.post_merge()
 	
 	# checkout one entry, either a dir or a file, from the log
 	def checkout(self, entry, isExistent = False):
 		if entry["type"] == "file" or entry["type"] == "photo" or entry["type"] == "audio" or entry["type"] == "video":
-			print self.getName() + ": Syncing file " + self._localPath + "/" + entry["name"]
-			
+			print self.getName() + ": adding task to sync " + self._localPath + "/" + entry["name"]
+			taskQueue.put(Task("download", "file", self._localPath + "/" + entry["name"], self._remotePath + "/" + entry["name"]))
 		else:
-			print self.getName() + ": Syncing dir " + self._localPath + "/" + entry["name"]
-			ent = OneDriveThread(self._localPath + "/" + entry["name"], self._remotePath + "/" + entry["name"])
+			print self.getName() + ": scanning dir " + self._localPath + "/" + entry["name"]
+			ent = DirScanner(self._localPath + "/" + entry["name"], self._remotePath + "/" + entry["name"])
 			ent.start()
-	
-	# download a file to localPath
-	def get_file(self, entry):
-		pass
-	
-	# upload a file to remotePath
-	def put_file(self, entry):
-		pass
-	
-	# remove a file from remotePath
-	def rm_file(self, entry):
-		pass
-	
-	# make a dir to remotePath
-	def mk_dir(self, ent_stat):
-		pass
 	
 	# note: mv, cp, and del will be handled by daemon rather than this sync script
 	
@@ -98,11 +138,10 @@ class OneDriveThread(threading.Thread):
 		# there is untouched item in current dir
 		if self._ent_list != []:
 			print self.getName() + ": The following items are untouched yet:\n" + str(self._ent_list)
-			# so handle them!
-		# print something so I know what happened.
-		# self.debug()
-		# self.ls()
-		
+			for entry in self._ent_list:
+				# assuming it is a file for now
+				taskQueue.put(Task("upload", "file", self._localPath + "/" + entry, self._remotePath + "/" + entry))
+		print self.getName() + ": done."
 		# new logs should get from recent list
 	
 	# print the internal storage
@@ -113,7 +152,16 @@ class OneDriveThread(threading.Thread):
 		print "\n"
 		print self._ent_list
 		print "\n"
+
+# Monitor runs inotifywait component and parses the log
+# when an event is issued, parse it and add work to the task queue.
+class Monitor(threading.Thread):
+	def __init__(self, rootPath):
+		threading.Thread.__init__(self)
 	
+	def run(self):
+		pass
+		
 CONF_PATH = "~/.onedrive"
 
 f = open(os.path.expanduser(CONF_PATH + "/user.conf"), "r")
@@ -123,12 +171,21 @@ f.close()
 threads = []
 threads_lock = threading.Lock()
 
-rootThread = OneDriveThread(CONF["rootPath"], "")
+taskQueue = Queue()
+
+rootThread = DirScanner(CONF["rootPath"], "")
 rootThread.start()
 
-for t in threads:
-    t.join()
+numOfWorkers = 4
 
-print "All threads are done."
-print threads
+for i in range(numOfWorkers):
+     w = TaskWorker()
+	 w.start()
 
+#for t in threads:
+#    t.join()
+
+#print "All threads are done."
+#print threads
+
+# Main thread then should create monitor and let workers continually consume the queue
