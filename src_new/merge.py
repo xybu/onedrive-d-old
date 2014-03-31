@@ -4,15 +4,18 @@
 # Warning: Rely heavily on system time and if the timestamp is screwed there may be unwanted file deletions.
 
 import sys, os, subprocess, yaml
+import threading
 
-# OneDriveEntry represents either a file entry or a dir entry in the OneDrive repository
-class OneDriveEntry:
+# OneDriveThread represents either a file entry or a dir entry in the OneDrive repository
+# it uses a single thread to process a directory entry
+class OneDriveThread(threading.Thread):
 	_raw_log = []
 	_ent_list = []
 	_remotePath = ""
 	_localPath = ""
 	
 	def __init__(self, localPath, remotePath):
+		threading.Thread.__init__(self)
 		self._localPath = localPath
 		self._remotePath = remotePath
 		print "Start merging dir " + remotePath + " (locally at \"" + localPath + "\")"
@@ -22,6 +25,12 @@ class OneDriveEntry:
 		subp = subprocess.Popen(['skydrive-cli', 'ls', '--objects', self._remotePath], stdout=subprocess.PIPE)
 		log = subp.communicate()[0]
 		self._raw_log = yaml.safe_load(log)
+	
+	def run(self):
+		threads_lock.acquire()
+		threads.append(self)
+		thread_lock.release()
+		self.merge()
 	
 	# list the current dirs and files in the local repo, and in merge() upload / delete entries accordingly
 	def pre_merge(self):
@@ -64,7 +73,7 @@ class OneDriveEntry:
 		else:
 			print "Syncing dir " + self._localPath + "/" + entry["name"]
 			ent = OneDriveEntry(self._localPath + "/" + entry["name"], self._remotePath + "/" + entry["name"])
-			ent.merge()
+			ent.start()
 	
 	# download a file to localPath
 	def get_file(self, entry):
@@ -108,5 +117,13 @@ f = open(os.path.expanduser(CONF_PATH + "/user.conf"), "r")
 CONF = yaml.safe_load(f)
 f.close()
 
-rootDir = OneDriveEntry(CONF["rootPath"], "")
-rootDir.merge()
+threads = []
+threads_lock = threading.Lock()
+
+rootThread = OneDriveThread(CONF["rootPath"], "")
+rootThread.start()
+
+for t in threads:
+    t.join()
+
+print "All threads are done."

@@ -36,6 +36,7 @@ install_pkg inotify-tools
 
 echo "install urllib3 pre-requisite for python-skydrive..."
 sudo pip install urllib3 --upgrade
+sudo pip install requests --upgrade
 
 # install python-skydrive
 #  Note that to install stuff in system-wide PATH and site-packages, 
