@@ -10,7 +10,7 @@ import sys, os
 import yaml
 from entries import * 
 
-settingsFile = open(os.path.expanduser("~/.onedrive/user.conf"), "r");
+settingsFile = open(os.path.expanduser("~/.onedrive/user.conf"), "r")
 settingsMap = yaml.safe_load(settingsFile)
 settingsFile.close()
 
