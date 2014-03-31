@@ -1,3 +1,0 @@
-1. let entries.py parse root.log file as a whole instead of getting file hierarchy for each subdir.
-2. ...
-9999. possibly a GUI for controlling the daemon?
