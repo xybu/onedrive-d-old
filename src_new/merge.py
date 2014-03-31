@@ -18,7 +18,7 @@ class OneDriveThread(threading.Thread):
 		threading.Thread.__init__(self)
 		self._localPath = localPath
 		self._remotePath = remotePath
-		print "Start merging dir " + remotePath + " (locally at \"" + localPath + "\")"
+		print self.getName() + ": Start merging dir " + remotePath + " (locally at \"" + localPath + "\")"
 		self.ls()
 	
 	def ls(self):
@@ -29,7 +29,7 @@ class OneDriveThread(threading.Thread):
 	def run(self):
 		threads_lock.acquire()
 		threads.append(self)
-		thread_lock.release()
+		threads_lock.release()
 		self.merge()
 	
 	# list the current dirs and files in the local repo, and in merge() upload / delete entries accordingly
@@ -54,13 +54,13 @@ class OneDriveThread(threading.Thread):
 			return
 		for entry in self._raw_log:
 			if os.path.exists(self._localPath + "/" + entry["name"]):
-				print "Oops, " + self._localPath + "/" + entry["name"] + " exists."
+				print self.getName() + ": Oops, " + self._localPath + "/" + entry["name"] + " exists."
 				# do some merge
 				self.checkout(entry)
 				# after sync-ing
 				del self._ent_list[self._ent_list.index(entry["name"])] # remove the ent from untouched list
 			else:
-				print "Wow, " + self._localPath + "/" + entry["name"] + " does not exist."
+				print self.getName() + ": Wow, " + self._localPath + "/" + entry["name"] + " does not exist."
 				self.checkout(entry)
 		
 		self.post_merge()
@@ -68,11 +68,11 @@ class OneDriveThread(threading.Thread):
 	# checkout one entry, either a dir or a file, from the log
 	def checkout(self, entry, isExistent = False):
 		if entry["type"] == "file" or entry["type"] == "photo" or entry["type"] == "audio" or entry["type"] == "video":
-			print "Syncing file " + self._localPath + "/" + entry["name"]
+			print self.getName() + ": Syncing file " + self._localPath + "/" + entry["name"]
 			
 		else:
-			print "Syncing dir " + self._localPath + "/" + entry["name"]
-			ent = OneDriveEntry(self._localPath + "/" + entry["name"], self._remotePath + "/" + entry["name"])
+			print self.getName() + ": Syncing dir " + self._localPath + "/" + entry["name"]
+			ent = OneDriveThread(self._localPath + "/" + entry["name"], self._remotePath + "/" + entry["name"])
 			ent.start()
 	
 	# download a file to localPath
@@ -97,10 +97,13 @@ class OneDriveThread(threading.Thread):
 	def post_merge(self):
 		# there is untouched item in current dir
 		if self._ent_list != []:
-			print "The following items are untouched yet:\n" + str(self._ent_list)
+			print self.getName() + ": The following items are untouched yet:\n" + str(self._ent_list)
 			# so handle them!
 		# print something so I know what happened.
-		self.debug()
+		# self.debug()
+		# self.ls()
+		
+		# new logs should get from recent list
 	
 	# print the internal storage
 	def debug(self):
@@ -127,3 +130,5 @@ for t in threads:
     t.join()
 
 print "All threads are done."
+print threads
+
