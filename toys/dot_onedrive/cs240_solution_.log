@@ -1,0 +1,20 @@
+- client_updated_time: 2013-11-26T02:37:02+0000
+  comments_count: 0
+  comments_enabled: False
+  created_time: 2013-11-25T03:56:04+0000
+  description: 
+  from:
+    id: 53beaaf056826882
+    name: Xiangyu Bu
+  id: file.53beaaf056826882.53BEAAF056826882!113
+  is_embeddable: True
+  link: https://onedrive.live.com/redir.aspx?cid=53beaaf056826882&page=view&resid=53BEAAF056826882!113&parid=53BEAAF056826882!112
+  name: backup.c
+  parent_id: folder.53beaaf056826882.53BEAAF056826882!112
+  shared_with:
+    access: Just me
+  size: 32
+  source: https://r4pgva.bay.livefilestore.com/y2mLR0v5NlrFQg_41BZvSGNcJCJb-dpTdWrxk6ytspTnmZZ2cQXcX05EWnBkW6huGe4vYu8pKN5V0iMCbKzK5NLhdicrbBYNufh2z6NKVePu9E/backup.c?psid=1
+  type: file
+  updated_time: 2013-11-26T02:37:02+0000
+  upload_location: https://apis.live.net/v5.0/file.53beaaf056826882.53BEAAF056826882!113/content/

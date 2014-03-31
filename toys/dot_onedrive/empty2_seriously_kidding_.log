@@ -1,0 +1,67 @@
+- client_updated_time: 2013-11-25T03:57:42+0000
+  comments_count: 0
+  comments_enabled: False
+  count: 0
+  created_time: 2013-11-25T03:57:42+0000
+  description: 
+  from:
+    id: 53beaaf056826882
+    name: Xiangyu Bu
+  id: folder.53beaaf056826882.53BEAAF056826882!121
+  is_embeddable: True
+  link: https://onedrive.live.com/redir.aspx?cid=53beaaf056826882&page=view&resid=53BEAAF056826882!121&parid=53BEAAF056826882!118
+  name: really-empty
+  parent_id: folder.53beaaf056826882.53BEAAF056826882!118
+  shared_with:
+    access: Just me
+  size: 0
+  type: folder
+  updated_time: 2013-11-25T03:57:42+0000
+  upload_location: https://apis.live.net/v5.0/folder.53beaaf056826882.53BEAAF056826882!121/files/
+- album: None
+  album_artist: None
+  artist: None
+  client_updated_time: 2013-11-26T02:37:21+0000
+  comments_count: 0
+  comments_enabled: False
+  created_time: 2013-11-25T03:57:34+0000
+  description: 
+  duration: 3722
+  from:
+    id: 53beaaf056826882
+    name: Xiangyu Bu
+  genre: None
+  id: file.53beaaf056826882.53BEAAF056826882!119
+  is_embeddable: True
+  link: https://onedrive.live.com/redir.aspx?cid=53beaaf056826882&page=view&resid=53BEAAF056826882!119&parid=53BEAAF056826882!118
+  name: arribba.wav
+  parent_id: folder.53beaaf056826882.53BEAAF056826882!118
+  picture: None
+  shared_with:
+    access: Just me
+  size: 41094
+  source: https://r494lg.by3301.livefilestore.com/y2mxX7vrOJK-l7vtMAqKuyJduAgpWiVLs9tg7DutrNSceDuIjZp8_piN24jCTIj93VsUXTrZgvnfHLyWQbVHJbzmczv6wyott_f8Gzd16JyY8I/arribba.wav?psid=1
+  title: None
+  type: audio
+  updated_time: 2013-11-26T02:37:21+0000
+  upload_location: https://apis.live.net/v5.0/file.53beaaf056826882.53BEAAF056826882!119/content/
+- client_updated_time: 2013-11-26T02:37:23+0000
+  comments_count: 0
+  comments_enabled: False
+  created_time: 2013-11-25T03:57:37+0000
+  description: 
+  from:
+    id: 53beaaf056826882
+    name: Xiangyu Bu
+  id: file.53beaaf056826882.53BEAAF056826882!120
+  is_embeddable: True
+  link: https://onedrive.live.com/redir.aspx?cid=53beaaf056826882&page=view&resid=53BEAAF056826882!120&parid=53BEAAF056826882!118
+  name: LICENSE
+  parent_id: folder.53beaaf056826882.53BEAAF056826882!118
+  shared_with:
+    access: Just me
+  size: 415
+  source: https://r494lg.by3302.livefilestore.com/y2mMN6K-BHUcsn2w141W0CvvpxgzxfWmbRyiSLilHbKc77xEjxxb8a__tkHCAbe8FnRvS9KcxnDWyMOHrXsKw8Ex1j6Ix3G3cQum1IlJ4lpvt0/LICENSE?psid=1
+  type: file
+  updated_time: 2013-11-26T02:37:23+0000
+  upload_location: https://apis.live.net/v5.0/file.53beaaf056826882.53BEAAF056826882!120/content/

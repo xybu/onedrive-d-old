@@ -1,0 +1,60 @@
+- client_updated_time: 2013-11-25T03:55:57+0000
+  comments_count: 0
+  comments_enabled: False
+  count: 1
+  created_time: 2013-11-25T03:55:57+0000
+  description: 
+  from:
+    id: 53beaaf056826882
+    name: Xiangyu Bu
+  id: folder.53beaaf056826882.53BEAAF056826882!112
+  is_embeddable: True
+  link: https://onedrive.live.com/redir.aspx?cid=53beaaf056826882&page=view&resid=53BEAAF056826882!112&parid=53BEAAF056826882!109
+  name: solution
+  parent_id: folder.53beaaf056826882.53BEAAF056826882!109
+  shared_with:
+    access: Just me
+  size: 32
+  type: folder
+  updated_time: 2013-11-26T02:37:02+0000
+  upload_location: https://apis.live.net/v5.0/folder.53beaaf056826882.53BEAAF056826882!112/files/
+- client_updated_time: 2013-11-26T02:37:04+0000
+  comments_count: 0
+  comments_enabled: False
+  created_time: 2013-11-25T03:55:54+0000
+  description: 
+  from:
+    id: 53beaaf056826882
+    name: Xiangyu Bu
+  id: file.53beaaf056826882.53BEAAF056826882!111
+  is_embeddable: True
+  link: https://onedrive.live.com/redir.aspx?cid=53beaaf056826882&page=view&resid=53BEAAF056826882!111&parid=53BEAAF056826882!109
+  name: hello.exe
+  parent_id: folder.53beaaf056826882.53BEAAF056826882!109
+  shared_with:
+    access: Just me
+  size: 90096
+  source: https://sgs7rq.by3301.livefilestore.com/y2mUEDyup-MrDrxkS1K7ZnlIX38SXoRUJS8FEjI7WB0vQOXNdAC3J-eXahZJyNx0HRk9kZOjlbHapVmFp0mH27v17g8bZBEj4gxMMH9S-cTKhU/hello.exe?psid=1
+  type: file
+  updated_time: 2013-11-26T02:37:04+0000
+  upload_location: https://apis.live.net/v5.0/file.53beaaf056826882.53BEAAF056826882!111/content/
+- client_updated_time: 2013-11-26T02:37:06+0000
+  comments_count: 0
+  comments_enabled: False
+  created_time: 2013-11-25T03:55:43+0000
+  description: 
+  from:
+    id: 53beaaf056826882
+    name: Xiangyu Bu
+  id: file.53beaaf056826882.53BEAAF056826882!110
+  is_embeddable: True
+  link: https://onedrive.live.com/redir.aspx?cid=53beaaf056826882&page=view&resid=53BEAAF056826882!110&parid=53BEAAF056826882!109
+  name: hello.s
+  parent_id: folder.53beaaf056826882.53BEAAF056826882!109
+  shared_with:
+    access: Just me
+  size: 548
+  source: https://sgs7rq.by3302.livefilestore.com/y2mKmdRBz5XrC8AtH7awQflh6RCWvCkvZJAwQpMXWlCBAXwPaIL64AOVBxYCWbrh7pX-5YRx6iJhvG5qfQllq8zXS210a2jc35n6-hZf7cawck/hello.s?psid=1
+  type: file
+  updated_time: 2013-11-26T02:37:06+0000
+  upload_location: https://apis.live.net/v5.0/file.53beaaf056826882.53BEAAF056826882!110/content/
