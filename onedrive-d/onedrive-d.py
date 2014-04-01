@@ -2,7 +2,7 @@
 
 # Warning: Rely heavily on system time and if the timestamp is screwed there may be unwanted file deletions.
 
-import sys, os, gc, subprocess, yaml
+import sys, os, gc, subprocess, signal, yaml
 import threading, Queue, time
 import csv,StringIO
 import calendar
@@ -30,6 +30,7 @@ class TaskWorker(threading.Thread):
 	
 	def __init__(self):
 		threading.Thread.__init__(self)
+		self.daemon = True
 		print self.getName() + " (worker): initialied"
 	
 	def getArgs(self, t):
@@ -82,6 +83,7 @@ class DirScanner(threading.Thread):
 	
 	def __init__(self, localPath, remotePath):
 		threading.Thread.__init__(self)
+		self.daemon = True
 		scanner_threads_lock.acquire()
 		scanner_threads.append(self)
 		scanner_threads_lock.release()
@@ -196,6 +198,7 @@ class LocalMonitor(threading.Thread):
 	
 	def __init__(self, rootPath):
 		threading.Thread.__init__(self)
+		self.daemon = True
 		self.rootPath = rootPath
 	
 	def handle(self, logItem):
@@ -288,6 +291,8 @@ print "Main: create monitor"
 
 local_mon = LocalMonitor(CONF["rootPath"])
 local_mon.start()
+
+signal.pause()
 
 # remote_mon = RemoteMonitor()
 # remote_mon.start()
