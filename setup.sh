@@ -6,7 +6,6 @@
 # sudo permission required.
 # 
 # @author	Xiangyu Bu
-# @update	Mar 02, 2014
 
 
 # The actual user who executes the script

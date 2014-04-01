@@ -1,12 +1,9 @@
 #!/bin/bash
 
-# inst.sh
-# 
-# Install the pre-requisites for skydrive-d
+# Install the pre-requisites for onedrive-d
 # sudo permission required.
 # 
 # @author	Xiangyu Bu
-# 
 
 # function install_pkg $pkgName
 install_pkg() {
@@ -49,9 +46,9 @@ sudo pip install 'git+https://github.com/mk-fg/python-skydrive.git#egg=python-sk
 # patch python-skydrive to solve ImportError: no module PoolManager
 # Issue URL: https://github.com/mk-fg/python-skydrive/issues/13
 #TODO: suppose it is installed in /usr/local/lib/python2.7/dist-packages/skydrive/ for now...
-echo "Patching python-skydrive for a potential bug..."
-PYTHON_SKYDRIVE_PATH=/usr/local/lib/python2.7/dist-packages/skydrive
-sudo sed -i 's/requests.packages.urllib3/urllib3/g' $PYTHON_SKYDRIVE_PATH/*.py
-sudo rm -f $PYTHON_SKYDRIVE_PATH/*.pyc
-echo "Successfully patched python-skydrive."
+#echo "Patching python-skydrive for a potential bug..."
+#PYTHON_SKYDRIVE_PATH=/usr/local/lib/python2.7/dist-packages/skydrive
+#sudo sed -i 's/requests.packages.urllib3/urllib3/g' $PYTHON_SKYDRIVE_PATH/*.py
+#sudo rm -f $PYTHON_SKYDRIVE_PATH/*.pyc
+#echo "Successfully patched python-skydrive."
 
