@@ -53,8 +53,11 @@ class TaskWorker(threading.Thread):
 		subp = subprocess.Popen(['skydrive-cli'] + args, stdout=subprocess.PIPE)
 		ret = subp.communicate()
 		if t.type == "get":
-			local_mtime = calendar.timegm(parser.parse(t.timeStamp).utctimetuple())
-			os.utime(t.p1, (local_mtime, local_mtime))
+			old_mtime = os.stat(t.p1).st_mtime
+			new_mtime = calendar.timegm(parser.parse(t.timeStamp).utctimetuple())
+			os.utime(t.p1, (new_mtime, new_mtime))
+			new_old_mtime = os.stat(t.p1).st_mtime
+			print self.getName() + ": " + t.p1 + " Old_mtime is " + str(old_mtime) + " and new_mtime is " + str(new_mtime) + " and is changed to " + str(new_old_mtime)
 		if ret[0] != None:
 			print "subprocess stdout: " + ret[0]
 		if ret[1] != None:
@@ -66,12 +69,14 @@ class TaskWorker(threading.Thread):
 	
 	def run(self):
 		while True:
-			if taskQueue.empty():
+			if stopEvent.is_set():
+				break
+			elif taskQueue.empty():
 				time.sleep(self.WORKER_SLEEP_INTERVAL)
 			else:
 				task = taskQueue.get()
-				taskQueue.task_done()
 				self.consume(task)
+				taskQueue.task_done()
 
 # DirScanner represents either a file entry or a dir entry in the OneDrive repository
 # it uses a single thread to process a directory entry
@@ -198,7 +203,7 @@ class LocalMonitor(threading.Thread):
 	
 	def __init__(self, rootPath):
 		threading.Thread.__init__(self)
-		self.daemon = True
+		# self.daemon = True
 		self.rootPath = rootPath
 	
 	def handle(self, logItem):
@@ -238,6 +243,8 @@ class LocalMonitor(threading.Thread):
 		subp = subprocess.Popen(['inotifywait', '-e', 'unmount,close_write,create,delete,delete_self,move', '-cmr', self.rootPath], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 		while True:
 			# I think stdout buffer is fine for now
+			if stopEvent.is_set():
+				break
 			line = subp.stdout.readline()
 			if line == "":
 				if self.MOVED_FROM_BUF != []:
@@ -272,8 +279,13 @@ scanner_threads_lock = threading.Lock()
 
 taskQueue = Queue.Queue()
 
+worker_threads = []
+stopEvent = threading.Event()
+
 for i in range(NUM_OF_WORKERS):
-	TaskWorker().start()
+	w = TaskWorker()
+	worker_threads.append(w)
+	w.start()
 
 # commented for local testing's purpose
 DirScanner(CONF["rootPath"], "").start()
@@ -291,6 +303,15 @@ print "Main: create monitor"
 
 local_mon = LocalMonitor(CONF["rootPath"])
 local_mon.start()
+
+def signal_handler(signal, frame):
+	print 'got signal ' + str(signal) + '!'
+	stopEvent.set()
+	for w in worker_threads:
+		w.join()
+	sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
 
 signal.pause()
 
