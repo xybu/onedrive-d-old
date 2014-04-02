@@ -44,17 +44,19 @@ setup(
 		'Topic :: System :: Filesystems',
 		'Topic :: Utilities'],
 	
-	# install_requires = [],
-	extras_require=dict(
-		standalone=['requests'],
-		cli=['PyYAML', 'requests', 'urllib3', 'python-skydrive'],
-		conf=['PyYAML', 'requests', 'urllib3', 'python-skydrive']),
+	install_requires = ['PyYAML', 'requests', 'urllib3', 'python-skydrive'],
+	#extras_require=dict(
+	#	standalone=['PyYAML', 'requests', 'urllib3', 'python-skydrive'],
+	#	cli=['PyYAML', 'requests', 'urllib3', 'python-skydrive'],
+	#	conf=['PyYAML', 'requests', 'urllib3', 'python-skydrive']),
 
-	packages=['onedrive-d'],
+	packages=['onedrive'],
+	scripts=['onedrive/onedrive-d','onedrive/onedrive-utils'],
 	include_package_data=True,
-	package_data={'': ['README.md']},
-	exclude_package_data={'': ['README.*']},
+	#package_data={'': ['README.md']},
+	exclude_package_data={'': ['README.*']}
 
-	entry_points=dict(console_scripts=[
-		'']))
-	
+	#entry_points=dict(console_scripts=[
+	#	'onedrive-d = onedrive/onedrive.py'])
+	)
+
