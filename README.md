@@ -25,13 +25,13 @@ Besides the `python-skydrive` base, there are a few major components in the proj
  	 * Periodically gets the most recently changed files from OneDrive server _(planned)_
  	 * more at http://isdk.dev.live.com/dev/isdk/ISDK.aspx?category=scenarioGroup_skyDrive&index=6
  * **Linux Service**
- 	 * A script that binds the python program to init.d
+ 	 * A script that binds the python program to /etc/init.d
  	 * uses `start-stop-daemon` as the service interface _(planned)_
 
 Notice
 --------
 
-* (April 1, 2014, by XB) The program in `wip` branch is now functional. More tests and polishments are needed.
+* (April 1, 2014, by XB) The program in `wip` branch is now functional. More tests and polishes are needed.
 
 * (Mar 30, 2014, by XB) If you encountered an `ImportError` when python imports `PoolManager()`, please use the `inst_pre_requisite.sh` in **wip** branch which patched the problem for now.
 	 * Update `python-requests` package can also solve the problem.
@@ -39,9 +39,15 @@ Notice
 
 Installation
 --------------
-__The file is to be rewritten.__
 
-Execute the command: `sudo ./setup.sh` to install the daemon.
+ - Download the source from GitHub repo
+ - In the source directory, run `sudo python setup.py install`
+ - Run command `onedrive-utils all` to make sure things get installed properly
+ 
+ Notes:
+ 
+ The daemon installation is not done yet. The directions above merely installs onedrive-d
+ as a standalone program.
 
 Homepage
 -----------
