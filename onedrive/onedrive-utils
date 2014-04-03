@@ -44,11 +44,14 @@ def queryUser(question, answer = "y"):
 
 def mkdirIfMissing(path):
 	try:
+		if path == "":
+			print "The specified path is empty string."
+			return False
 		if not os.path.exists(path):
 			os.mkdir(path, 0700)
 			print "Created directory \"" + path + "\"."
 		return True
-	except OSError:
+	except OSError as e:
 		print "OSError({0}): {1}".format(e.errno, e.strerror)
 		return False
 
@@ -58,91 +61,25 @@ def checkOSVersion():
 			print "Stopped."
 			sys.exit(0)
 
-def getDaemonScript():
-	return "#!/bin/sh\n"
-		+ "\n"
-		+ "### BEGIN INIT INFO\n"
-		+ "# Provides:          onedrive-d\n"
-		+ "# Required-Start:    $remote_fs $syslog\n"
-		+ "# Required-Stop:     $remote_fs $syslog\n"
-		+ "# Default-Start:     2 3 4 5\n"
-		+ "# Default-Stop:      0 1 6\n"
-		+ "# Short-Description: Start daemon at boot time\n"
-		+ "# Description:       Enable service provided by daemon.\n"
-		+ "### END INIT INFO\n"
-		+ "\n"
-		+ "DAEMON=onedrive-daemon\n"
-		+ "DAEMON_NAME=onedrive-daemon\n"
-		+ "\n"
-		+ "DAEMON_USER=\"$SUDO_USER\"\n"
-		+ "if [ \"${#DAEMON_USER}\" -eq \"0\" ]; then\n"
-		+ "	DAEMON_USER=\"$USER\"\n"
-		+ "fi\n"
-		+ "\n"
-		+ "PIDFILE=/var/run/$DAEMON_NAME.pid\n"
-		+ "\n"
-		+ ". /lib/lsb/init-functions\n"
-		+ "\n"
-		+ "do_start () {\n"
-		+ "	log_daemon_msg \"Starting daemon $DAEMON_NAME\"\n"
-		+ "	start-stop-daemon --start --background --pidfile $PIDFILE --make-pidfile --user $DAEMON_USER --chuid $DAEMON_USER --exec $DAEMON_NAME\n"
-		+ "	log_end_msg $?\n"
-		+ "}\n"
-		+ "\n"
-		+ "do_stop () {\n"
-		+ "	log_daemon_msg \"Stopping daemon $DAEMON_NAME\"\n"
-		+ "	start-stop-daemon --stop --pidfile $PIDFILE --retry 10 --signal SIGINT\n"
-		+ "	log_end_msg $?\n"
-		+ "}\n"
-		+ "\n"
-		+ "case \"$1\" in\n"
-		+ "\n"
-		+ "	start|stop)\n"
-		+ "		do_${1}\n"
-		+ "		;;\n"
-		+ "\n"
-		+ "	restart|reload|force-reload)\n"
-		+ "		do_stop\n"
-		+ "		do_start\n"
-		+ "		;;\n"
-		+ "\n"
-		+ "	status)\n"
-		+ "		status_of_proc \"$DAEMON_NAME\" \"$DAEMON\" && exit 0 || exit $?\n"
-		+ "		;;\n"
-		+ "	\n"
-		+ "	*)\n"
-		+ "		echo \"Usage: /etc/init.d/$DAEMON_NAME {start|stop|restart|status}\"\n"
-		+ "		exit 1\n"
-		+ "		;;\n"
-		+ "	\nesac\n\nexit 0\n\n";
-
 def setupDaemon():
 	rootPath = ""
 	
 	print "Setting up OneDrive-d..."
-	# write down app information
-	f = open(HOME_PATH + "/.lcrc", "w")
-	f.write("client:\n  id: " + APP_CLIENT_ID + "\n  secret: " + APP_SECRET + "\n")
-	f.close()
 	
 	assert mkdirIfMissing(HOME_PATH + "/.onedrive"), "Failed to create the configuration path."
 	
-	exclusion_list = ""
+	exclusion_list = []
 	
-	if queryUser("Do you want to exclude some files from being synchronized? ", None):
+	if queryUser("Do you want to exclude some files from being synchronized? ", "y"):
 		if queryUser("\t1. Do you want to exclude ViM temporary files?", "y"):
-			exclusion_list = exclusion_list + "@(.*~|\.netrwhist|\.directory|Session\.vim|[._]*.s[a-w][a-z]|[._]s[a-w][a-z]|.*\.un~)\n"
+			exclusion_list = exclusion_list + ".*~|\.netrwhist|\.directory|Session\.vim|[._]*.s[a-w][a-z]|[._]s[a-w][a-z]|.*\.un~".split("|")
 		if queryUser("\t2. Do you want to exclude emacs temporary files?", "y"):
-			exclusion_list = exclusion_list + "@(\#.*\#|\.emacs\.desktop|\.emacs\.desktop\.lock|.*\.elc|/auto-save-list|\.\#.*|\.org-id-locations|.*_flymake\..*)\n"
+			exclusion_list = exclusion_list + "\#.*\#|\.emacs\.desktop|\.emacs\.desktop\.lock|.*\.elc|/auto-save-list|\.\#.*|\.org-id-locations|.*_flymake\..*".split("|")
 		if queryUser("\t3. Do you want to exclude possibly Mac OS X temporary files?", "y"):
-			exclusion_list = exclusion_list + "@(\.DS_Store|\.AppleDouble|\.LSOverride|\._.*|\.Spotlight-V100|\.Trashes)\n"
+			exclusion_list = exclusion_list + "\.DS_Store|\.AppleDouble|\.LSOverride|\._.*|\.Spotlight-V100|\.Trashes".split("|")
 		
-		if exclusion_list != "":
-			f = open(HOME_PATH + "/.onedrive/exclusion.list", "w")
-			f.write(exclusion_list)
-			f.close()
-			print "Exclusion list saved."
-			exclusion_list = "exclude: " + HOME_PATH + "/.onedrive/exclusion.list"
+		if exclusion_list != []:
+			exclusion_list = "exclude: ^(" + "|".join(exclusion_list) + ")$\n"
 		else:
 			print "There is nothing in the exclusion list."
 	else:
@@ -167,19 +104,76 @@ def setupDaemon():
 	#TODO: unfinished yet
 	#open(HOME_PATH + "", "r")
 	
-	print "Check if the daemon has been installed..."
-	if os.path.exists("/etc/init.d/onedrive-d"):
-		wr = queryUser("The daemon script already exists in the system.\nOverwrite to update?", "y")
-	else:
-		wr = True
+	sh = """
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:          onedrive-d
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start daemon at boot time
+# Description:       Enable service provided by daemon.
+### END INIT INFO
+
+DAEMON=onedrive-daemon
+DAEMON_NAME=onedrive-daemon
+DAEMON_PATH=<PLACE_HOLDER_1>
+
+DAEMON_USER="$SUDO_USER"
+if [ "${#DAEMON_USER}" -eq "0" ]; then
+	DAEMON_USER="$USER"
+fi
+
+PIDFILE=/var/run/$DAEMON_NAME.pid
+
+. /lib/lsb/init-functions
+
+do_start () {
+	log_daemon_msg "Starting daemon $DAEMON_NAME"
+	start-stop-daemon --start --background --pidfile $PIDFILE --make-pidfile --user $DAEMON_USER --chuid $DAEMON_USER --startas $DAEMON_PATH
+	log_end_msg $?
+}
+
+do_stop () {
+	log_daemon_msg "Stopping daemon $DAEMON_NAME"
+	start-stop-daemon --stop --pidfile $PIDFILE --retry 10 --signal SIGINT
+	log_end_msg $?
+}
+
+case "$1" in
+
+	start|stop)
+		do_${1}
+		;;
+
+	restart|reload|force-reload)
+		do_stop
+		do_start
+		;;
+
+	status)
+		status_of_proc "$DAEMON_NAME" "$DAEMON" && exit 0 || exit $?
+		;;
 	
-	if wr:
-		subp = subprocess.Popen(["sudo", "cat", "-", ">", "/etc/init.d/onedrive-d"])
-		subp.communicate(getDaemonScript())
-		assert subp.returncode == 0
-		print "Daemon script has been written to /etc/init.d/onedrive-d"
-	else:
-		print "Did not install daemon script.\nYou can use onedrive-daemon command to start daemon manually."
+	*)
+		echo "Usage: /etc/init.d/$DAEMON_NAME {start|stop|restart|status}"
+		exit 1
+		;;
+esac
+
+exit 0
+
+"""
+	
+	print "Installing the daemon script..."
+	subp = subprocess.Popen(["cat - > /etc/init.d/onedrive-d && chmod u+x /etc/init.d/onedrive-d"], stdin=subprocess.PIPE, shell=True)
+	subp.stdin.write(sh.replace("<PLACE_HOLDER_1>", __file__.replace("-utils", "-daemon")))
+	ret = subp.communicate()
+	subp.stdin.close()
+	assert subp.returncode == 0
+	print "Daemon script has been written to /etc/init.d/onedrive-d"
 	
 	print "Finished setting up the program."
 	
@@ -205,6 +199,12 @@ def installPackages():
 	
 def authDaemon():
 	print "Authenticating..."
+	
+	# write down app information
+	f = open(HOME_PATH + "/.lcrc", "w")
+	f.write("client:\n  id: " + APP_CLIENT_ID + "\n  secret: " + APP_SECRET + "\n")
+	f.close()
+	
 	subp = subprocess.Popen(["skydrive-cli", "auth"])
 	ret = subp.communicate()
 	if subp.returncode != 0:
@@ -215,6 +215,9 @@ def authDaemon():
 			print "Authentication failed. OneDrive-d will not work."
 			sys.exit(0)
 	else:
+		subp = subprocess.Popen(["sudo", "chown", OS_USER, HOME_PATH + "/.lcrc"])
+		subp.communicate()
+		
 		print "Authenticated successfully."
 	
 	# use API method instead
