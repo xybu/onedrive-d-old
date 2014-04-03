@@ -114,9 +114,8 @@ def setupDaemon():
 # Description:       Enable service provided by daemon.
 ### END INIT INFO
 
-DAEMON=onedrive-daemon
 DAEMON_NAME=onedrive-daemon
-DAEMON_PATH=<PLACE_HOLDER_1>
+DAEMON_PATH=/usr/local/bin/onedrive-daemon
 
 DAEMON_USER="$SUDO_USER"
 if [ "${#DAEMON_USER}" -eq "0" ]; then
@@ -151,7 +150,7 @@ case "$1" in
 		;;
 
 	status)
-		status_of_proc "$DAEMON_NAME" "$DAEMON" && exit 0 || exit $?
+		status_of_proc "$DAEMON_NAME" "$DAEMON_NAME" && exit 0 || exit $?
 		;;
 	
 	*)
@@ -166,7 +165,7 @@ exit 0
 	
 	print "Installing the daemon script..."
 	subp = subprocess.Popen(["cat - > /etc/init.d/onedrive-d && chmod u+x /etc/init.d/onedrive-d"], stdin=subprocess.PIPE, shell=True)
-	subp.stdin.write(sh.replace("<PLACE_HOLDER_1>", __file__.replace("-utils", "-daemon")))
+	subp.stdin.write(sh)
 	ret = subp.communicate()
 	subp.stdin.close()
 	assert subp.returncode == 0
@@ -246,7 +245,7 @@ def authDaemon():
 		
 if __name__ == "__main__":
 	if len(sys.argv) < 2:
-		print "Usage: onedrive-utils [pkg|setup|auth|all]\n" + " * pkg: install or upgrade pre-requisite packages\n * setup: install and configure onedrive-d\n * auth: authenticate onedrive-d\n * all: do all the steps above"
+		print "Usage: sudo onedrive-utils [pkg|setup|auth|all]\n" + " * pkg: install or upgrade pre-requisite packages\n * setup: install and configure onedrive-d\n * auth: authenticate onedrive-d\n * all: do all the steps above"
 		sys.exit(1)
 	checkOSVersion()
 	argv = sys.argv
