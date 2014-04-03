@@ -19,7 +19,7 @@ else:
 
 OS_DIST =  platform.linux_distribution()
 
-APTITUDE_PKG_DEPENDENCIES = ["dpkg", "git", "python-pip", "libyaml-dev", "python-yaml", "python-dateutil", "inotify-tools"]
+APTITUDE_PKG_DEPENDENCIES = ["dpkg", "git", "python-pip", "libyaml-dev", "python-yaml", "python-dateutil", "inotify-tools", "python-webkit"]
 PIP_PKG_DEPENDENCIES = ["urllib3", "requests"]
 
 def queryUser(question, answer = "y"):
