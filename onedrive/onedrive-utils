@@ -58,6 +58,64 @@ def checkOSVersion():
 			print "Stopped."
 			sys.exit(0)
 
+def getDaemonScript():
+	return "#!/bin/sh\n"
+		+ "\n"
+		+ "### BEGIN INIT INFO\n"
+		+ "# Provides:          onedrive-d\n"
+		+ "# Required-Start:    $remote_fs $syslog\n"
+		+ "# Required-Stop:     $remote_fs $syslog\n"
+		+ "# Default-Start:     2 3 4 5\n"
+		+ "# Default-Stop:      0 1 6\n"
+		+ "# Short-Description: Start daemon at boot time\n"
+		+ "# Description:       Enable service provided by daemon.\n"
+		+ "### END INIT INFO\n"
+		+ "\n"
+		+ "DAEMON=onedrive-daemon\n"
+		+ "DAEMON_NAME=onedrive-daemon\n"
+		+ "\n"
+		+ "DAEMON_USER=\"$SUDO_USER\"\n"
+		+ "if [ \"${#DAEMON_USER}\" -eq \"0\" ]; then\n"
+		+ "	DAEMON_USER=\"$USER\"\n"
+		+ "fi\n"
+		+ "\n"
+		+ "PIDFILE=/var/run/$DAEMON_NAME.pid\n"
+		+ "\n"
+		+ ". /lib/lsb/init-functions\n"
+		+ "\n"
+		+ "do_start () {\n"
+		+ "	log_daemon_msg \"Starting daemon $DAEMON_NAME\"\n"
+		+ "	start-stop-daemon --start --background --pidfile $PIDFILE --make-pidfile --user $DAEMON_USER --chuid $DAEMON_USER --exec $DAEMON_NAME\n"
+		+ "	log_end_msg $?\n"
+		+ "}\n"
+		+ "\n"
+		+ "do_stop () {\n"
+		+ "	log_daemon_msg \"Stopping daemon $DAEMON_NAME\"\n"
+		+ "	start-stop-daemon --stop --pidfile $PIDFILE --retry 10 --signal SIGINT\n"
+		+ "	log_end_msg $?\n"
+		+ "}\n"
+		+ "\n"
+		+ "case \"$1\" in\n"
+		+ "\n"
+		+ "	start|stop)\n"
+		+ "		do_${1}\n"
+		+ "		;;\n"
+		+ "\n"
+		+ "	restart|reload|force-reload)\n"
+		+ "		do_stop\n"
+		+ "		do_start\n"
+		+ "		;;\n"
+		+ "\n"
+		+ "	status)\n"
+		+ "		status_of_proc \"$DAEMON_NAME\" \"$DAEMON\" && exit 0 || exit $?\n"
+		+ "		;;\n"
+		+ "	\n"
+		+ "	*)\n"
+		+ "		echo \"Usage: /etc/init.d/$DAEMON_NAME {start|stop|restart|status}\"\n"
+		+ "		exit 1\n"
+		+ "		;;\n"
+		+ "	\nesac\n\nexit 0\n\n";
+
 def setupDaemon():
 	rootPath = ""
 	
@@ -69,29 +127,62 @@ def setupDaemon():
 	
 	assert mkdirIfMissing(HOME_PATH + "/.onedrive"), "Failed to create the configuration path."
 	
-	if not os.path.exists(HOME_PATH + "/.onedrive/user.conf") or os.path.exists(HOME_PATH + "/.onedrive/user.conf") and queryUser("The configuration file already exists.\nOverwrite?", None):
-		while True:
-			sys.stdout.write("Please specify the directory to sync with OneDrive (default: " + HOME_PATH + "/OneDrive):\n")
-			response = raw_input().strip()
-			if mkdirIfMissing(response):
-				f = open(HOME_PATH + "/.onedrive/user.conf", "w")
-				rootPath = os.path.abspath(response)
-				f.write("rootPath: " + rootPath + "\n")
-				f.close()
-				break
-			else:
-				sys.stdout.write("Failed to create the directory \"" + response + "\". Please specify another one.\n")
-	else:
-		sys.stdout.write("Keep current configuration.\n")
-		f = open(HOME_PATH + "/.onedrive/user.conf", "r")
-		currentConf = yaml.safe_load(f)
-		f.close()
-		rootPath = currentConf["rootPath"]
+	exclusion_list = ""
 	
-	print rootPath
+	if queryUser("Do you want to exclude some files from being synchronized? ", None):
+		if queryUser("\t1. Do you want to exclude ViM temporary files?", "y"):
+			exclusion_list = exclusion_list + "@(.*~|\.netrwhist|\.directory|Session\.vim|[._]*.s[a-w][a-z]|[._]s[a-w][a-z]|.*\.un~)\n"
+		if queryUser("\t2. Do you want to exclude emacs temporary files?", "y"):
+			exclusion_list = exclusion_list + "@(\#.*\#|\.emacs\.desktop|\.emacs\.desktop\.lock|.*\.elc|/auto-save-list|\.\#.*|\.org-id-locations|.*_flymake\..*)\n"
+		if queryUser("\t3. Do you want to exclude possibly Mac OS X temporary files?", "y"):
+			exclusion_list = exclusion_list + "@(\.DS_Store|\.AppleDouble|\.LSOverride|\._.*|\.Spotlight-V100|\.Trashes)\n"
+		
+		if exclusion_list != "":
+			f = open(HOME_PATH + "/.onedrive/exclusion.list", "w")
+			f.write(exclusion_list)
+			f.close()
+			print "Exclusion list saved."
+			exclusion_list = "exclude: " + HOME_PATH + "/.onedrive/exclusion.list"
+		else:
+			print "There is nothing in the exclusion list."
+	else:
+		print "Skipped."
+	
+	while True:
+		sys.stdout.write("Please specify the directory to sync with OneDrive (default: " + HOME_PATH + "/OneDrive):\n")
+		response = raw_input().strip()
+		if mkdirIfMissing(response):
+			f = open(HOME_PATH + "/.onedrive/user.conf", "w")
+			rootPath = os.path.abspath(response)
+			f.write("rootPath: " + rootPath + "\n")
+			if exclusion_list != "":
+				f.write(exclusion_list)
+			f.write("confVer: 0.6\n")
+			f.close()
+			break
+		else:
+			sys.stdout.write("Failed to create the directory \"" + response + "\". Please specify another one.\n")
+	
+	#print rootPath
 	#TODO: unfinished yet
 	#open(HOME_PATH + "", "r")
-
+	
+	print "Check if the daemon has been installed..."
+	if os.path.exists("/etc/init.d/onedrive-d"):
+		wr = queryUser("The daemon script already exists in the system.\nOverwrite to update?", "y")
+	else:
+		wr = True
+	
+	if wr:
+		subp = subprocess.Popen(["sudo", "cat", "-", ">", "/etc/init.d/onedrive-d"])
+		subp.communicate(getDaemonScript())
+		assert subp.returncode == 0
+		print "Daemon script has been written to /etc/init.d/onedrive-d"
+	else:
+		print "Did not install daemon script.\nYou can use onedrive-daemon command to start daemon manually."
+	
+	print "Finished setting up the program."
+	
 def installPackages():
 	if queryUser("Do you want to run apt-get update && apt-get upgrade?", "y"):
 		subprocess.Popen(["sudo", "apt-get", "update"]).communicate()

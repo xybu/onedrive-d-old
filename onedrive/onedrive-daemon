@@ -201,10 +201,11 @@ class LocalMonitor(threading.Thread):
 	
 	event_buffer = {}
 	
-	def __init__(self, rootPath):
+	def __init__(self, rootPath, exclusion = ""):
 		threading.Thread.__init__(self)
 		# self.daemon = True
 		self.rootPath = rootPath
+		self.exclusion = exclusion
 	
 	def handle(self, logItem):
 		print "received a task: "
@@ -228,9 +229,6 @@ class LocalMonitor(threading.Thread):
 				taskQueue.put(Task("rm", logItem[0].replace(self.rootPath, "") + logItem[2], ""))
 			elif "DELETE" in logItem[1]:
 				taskQueue.put(Task("rm", logItem[0].replace(self.rootPath, "") + logItem[2], ""))
-			elif "CREATE" == logItem[1]:
-				# self.event_buffer[str(logItem[0]) + logItem[2]] = logItem
-				pass
 			elif "CLOSE_WRITE" in logItem[1]:
 				# simply upload the newly written file
 				#if logItem[0] + logItem[2] in self.event_buffer:
@@ -240,7 +238,12 @@ class LocalMonitor(threading.Thread):
 				#		pass
 	
 	def run(self):
-		subp = subprocess.Popen(['inotifywait', '-e', 'unmount,close_write,create,delete,delete_self,move', '-cmr', self.rootPath], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+		if self.exclusion != "":
+			self.exclusion = ["--fromfile", self.exclusion]
+		else
+			self.exclusion = []
+		subp = subprocess.Popen(['inotifywait', '-e', 'unmount,close_write,delete,delete_self,move', '-cmr'] + self.exclusion + [self.rootPath], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+		del self.exclusion
 		while True:
 			# I think stdout buffer is fine for now
 			if stopEvent.is_set():
@@ -255,7 +258,9 @@ class LocalMonitor(threading.Thread):
 				csv_entry = csv.reader(StringIO.StringIO(line))
 				for x in csv_entry:
 					self.handle(x)
-
+			else:
+				print "LocalMon: >>>" + line
+		
 # RemoteMonitor periodically fetches the most recent changes from OneDrive remote repo
 # if there are unlocalized changes, generate the tasks
 class RemoteMonitor(threading.Thread):
@@ -267,8 +272,20 @@ class RemoteMonitor(threading.Thread):
 	def run(self):
 		pass
 
+def gracefulExit(signal, frame):
+	print 'main: got signal ' + str(signal) + '!'
+	stopEvent.set()
+	for t in scanner_threads:
+		t.join()
+	for w in worker_threads:
+		w.join()
+	localMon.join()
+	sys.exit(0)
+
+signal.signal(signal.SIGINT, gracefulExit)
+
 CONF_PATH = "~/.onedrive"
-NUM_OF_WORKERS = 4	
+NUM_OF_WORKERS = 2
 
 f = open(os.path.expanduser(CONF_PATH + "/user.conf"), "r")
 CONF = yaml.safe_load(f)
@@ -287,31 +304,23 @@ for i in range(NUM_OF_WORKERS):
 	worker_threads.append(w)
 	w.start()
 
-# commented for local testing's purpose
 DirScanner(CONF["rootPath"], "").start()
-
-for t in scanner_threads:
-	t.join()
 
 taskQueue.join()
 
-print "Main: all done."
+print "main: all done."
 
 # Main thread then should create monitor and let workers continually consume the queue
 
-print "Main: create monitor"
+print "main: create monitor"
 
-local_mon = LocalMonitor(CONF["rootPath"])
+if "exclude" in CONF:
+	exclusion_list = CONF["exclude"]
+else:
+	exclusion_list = ""
+
+local_mon = LocalMonitor(CONF["rootPath"], exclusion_list)
 local_mon.start()
-
-def signal_handler(signal, frame):
-	print 'got signal ' + str(signal) + '!'
-	stopEvent.set()
-	for w in worker_threads:
-		w.join()
-	sys.exit(0)
-
-signal.signal(signal.SIGINT, signal_handler)
 
 signal.pause()
 

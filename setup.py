@@ -51,7 +51,7 @@ setup(
 	#	conf=['PyYAML', 'requests', 'urllib3', 'python-skydrive']),
 
 	packages=['onedrive'],
-	scripts=['onedrive/onedrive-d','onedrive/onedrive-utils'],
+	scripts=['onedrive/onedrive-daemon','onedrive/onedrive-utils'],
 	include_package_data=True,
 	#package_data={'': ['README.md']},
 	exclude_package_data={'': ['README.*']}
