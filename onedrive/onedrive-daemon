@@ -4,8 +4,7 @@
 
 import sys, os, gc, subprocess, signal, yaml
 import threading, Queue, time
-import re
-import csv,StringIO
+import re,csv,StringIO
 import calendar
 from dateutil import parser
 
