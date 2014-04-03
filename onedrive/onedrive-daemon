@@ -27,8 +27,6 @@ class Task():
 class TaskWorker(threading.Thread):
 	WORKER_SLEEP_INTERVAL = 5 # in seconds
 	
-	tasksComsumed = 0
-	
 	def __init__(self):
 		threading.Thread.__init__(self)
 		self.daemon = True
@@ -63,10 +61,9 @@ class TaskWorker(threading.Thread):
 			print "subprocess stdout: " + ret[0]
 		if ret[1] != None:
 			print "subprocess stderr: " + ret[1]
-		print self.getName() + ": executed the " + str(self.tasksComsumed) + " task: " + t.debug()
+		print self.getName() + ": executed task: " + t.debug()
 		
 		del t
-		self.tasksComsumed += 1
 	
 	def run(self):
 		while True:
@@ -203,45 +200,38 @@ class DirScanner(threading.Thread):
 # when an event is issued, parse it and add work to the task queue.
 class LocalMonitor(threading.Thread):
 	MONITOR_SLEEP_INTERVAL = 2 # in seconds
-	MOVED_FROM_BUF = []
-	
-	event_buffer = {}
+	EVENT_ON_HOLD = None
 	
 	def __init__(self):
 		threading.Thread.__init__(self)
-		# self.daemon = True
 		self.rootPath = CONF["rootPath"]
 	
 	def handle(self, logItem):
-		print "received a task: "
-		print logItem
+		print "local_mon: received a task: " + str(logItem)
+		dir = logItem[0]
+		event = logItem[1]
+		object = logItem[2]
 		
-		if "MOVED_FROM" in logItem[1] and self.MOVED_FROM_BUF == []:
-			self.MOVED_FROM_BUF = logItem
-			return
-		elif "MOVED_TO" in logItem[1]:
-			if "ISDIR" not in logItem[1]:
-				taskQueue.put(Task("mv", self.MOVED_FROM_BUF[0].replace(self.rootPath, "") + self.MOVED_FROM_BUF[2], logItem[0].replace(self.rootPath, "")))
+		if "MOVED_TO" in event:
+			if self.EVENT_ON_HOLD != None:
+				if self.EVENT_ON_HOLD[2] == object:
+					taskQueue.put(Task("mv", self.EVENT_ON_HOLD[0].replace(self.rootPath, "") + self.EVENT_ON_HOLD[2], dir.replace(self.rootPath, "")))
+					self.EVENT_ON_HOLD = None
+				else:
+					taskQueue.put(Task("rm", self.EVENT_ON_HOLD[0].replace(self.rootPath, "") + self.EVENT_ON_HOLD[2], ""))
+					taskQueue.put(Task("put", dir + object, dir.replace(self.rootPath, "")))
 			else:
-				taskQueue.put(Task("mv", self.MOVED_FROM_BUF[0].replace(self.rootPath, "") + self.MOVED_FROM_BUF[2] , logItem[0].replace(self.rootPath, "")))
-			self.MOVED_FROM_BUF = []
-		else:
-			# remove to recycle bin, may be subject to lag
-			if self.MOVED_FROM_BUF != []:
-				taskQueue.put(Task("rm", self.MOVED_FROM_BUF[0].replace(self.rootPath, "") + self.MOVED_FROM_BUF[2], ""))
-				self.MOVED_FROM_BUF = []
-			elif "MOVED_FROM" in logItem[1]:
-				taskQueue.put(Task("rm", logItem[0].replace(self.rootPath, "") + logItem[2], ""))
-			elif "DELETE" in logItem[1]:
-				taskQueue.put(Task("rm", logItem[0].replace(self.rootPath, "") + logItem[2], ""))
-			elif "CLOSE_WRITE" in logItem[1]:
-				# simply upload the newly written file
-				#if logItem[0] + logItem[2] in self.event_buffer:
-				#	if self.event_buffer[logItem[0] + logItem[2]][1] == "CREATE":
-				taskQueue.put(Task("put", logItem[0] + logItem[2], logItem[0].replace(self.rootPath, "")))	# p2 is folder
-				#	else:
-				#		pass
-	
+				taskQueue.put(Task("put", dir + object, dir.replace(self.rootPath, "")))
+		if "MOVED_FROM" in event:
+			if self.EVENT_ON_HOLD != None:
+				taskQueue.put(Task("rm", self.EVENT_ON_HOLD[0].replace(self.rootPath, "") + self.EVENT_ON_HOLD[2], ""))
+			self.EVENT_ON_HOLD = logItem
+			# taskQueue.put(Task("rm", dir.replace(self.rootPath, "") + object, ""))
+		elif "DELETE" in event:
+			taskQueue.put(Task("rm", dir.replace(self.rootPath, "") + object, ""))
+		elif "CLOSE_WRITE" in event:
+			taskQueue.put(Task("put", dir + object, dir.replace(self.rootPath, "")))
+		
 	def run(self):
 		if "exclude" in CONF:
 			exclude_args = ["--exclude", CONF["exclude"]]
