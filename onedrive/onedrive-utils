@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import os, sys, yaml, subprocess, platform
+import gtk, webkit
 
 # Prepare global variables
 
@@ -132,13 +133,13 @@ PIDFILE=/var/run/$DAEMON_NAME.pid
 
 do_start () {
 	log_daemon_msg "Starting daemon $DAEMON_NAME"
-	start-stop-daemon --start --background --pidfile $PIDFILE --make-pidfile --user $DAEMON_USER --chuid $DAEMON_USER --startas $DAEMON_PATH
+	start-stop-daemon --start --background --pidfile $PIDFILE --make-pidfile --user $DAEMON_USER --startas $DAEMON_PATH
 	log_end_msg $?
 }
 
 do_stop () {
 	log_daemon_msg "Stopping daemon $DAEMON_NAME"
-	start-stop-daemon --stop --pidfile $PIDFILE --retry 10 --signal SIGINT
+	start-stop-daemon --stop --pidfile $PIDFILE --retry 10 --signal INT
 	log_end_msg $?
 }
 
@@ -196,7 +197,32 @@ def installPackages():
 	subprocess.Popen(["sudo", "pip", "install", "git+https://github.com/mk-fg/python-skydrive.git#egg=python-skydrive[standalone]", "--upgrade"]).communicate()
 	
 	print "All the pre-requisite packages have been installed / upgraded."
-	
+
+def liveView_load_finished(webview, frame):
+	url = frame.get_uri()
+	if "https://login.live.com/oauth20_desktop.srf" in url:
+		subp = subprocess.Popen(["skydrive-cli", "auth", url])
+		ret = subp.communicate()
+		if subp.returncode != 0:
+			if queryUser("Authentication failed. Do you want to retry?", "y"):
+				# subp.kill()
+				gtk.main_quit()
+				authDaemon()
+			else:
+				print "Authentication failed. OneDrive-d will not work."
+				sys.exit(0)
+		else:
+			subp = subprocess.Popen(["sudo", "chown", OS_USER, HOME_PATH + "/.lcrc"])
+			subp.communicate()
+			print "Authenticated successfully."
+			gtk.main_quit()
+
+def w_delete_event(widget, event, data=None):
+	print "Authentication window closed."
+	widget.destroy()
+	gtk.main_quit()
+	return False
+
 def authDaemon():
 	print "Authenticating..."
 	
@@ -205,28 +231,22 @@ def authDaemon():
 	f.write("client:\n  id: " + APP_CLIENT_ID + "\n  secret: " + APP_SECRET + "\n")
 	f.close()
 	
-	subp = subprocess.Popen(["skydrive-cli", "auth"])
-	ret = subp.communicate()
-	if subp.returncode != 0:
-		if queryUser("Authentication failed. Do you want to retry?", "y"):
-			# subp.kill()
-			authDaemon()
-		else:
-			print "Authentication failed. OneDrive-d will not work."
-			sys.exit(0)
-	else:
-		subp = subprocess.Popen(["sudo", "chown", OS_USER, HOME_PATH + "/.lcrc"])
-		subp.communicate()
-		
-		print "Authenticated successfully."
+	from skydrive import api_v5, conf
+	authUrl = api_v5.PersistentSkyDriveAPI.from_conf(None).auth_user_get_url() + "&display=touch"
 	
-	# use API method instead
-	#from skydrive import api_v5, conf
-	#authUrl = api_v5.PersistentSkyDriveAPI.from_conf(None).auth_user_get_url()
-	#import webbrowser
-	#child = subprocess.Popen(['firefox', '-recording', authUrl])
-	#webbrowser.open(authUrl + "&display=touch", modal = True)
-	# then what??
+	liveView = webkit.WebView()
+	sw = gtk.ScrolledWindow()
+	sw.add(liveView)
+	liveView.connect("load-finished", liveView_load_finished)
+	win = gtk.Window(gtk.WINDOW_TOPLEVEL)
+	win.set_default_size(360, 500)
+	win.set_position(gtk.WIN_POS_CENTER)
+	win.connect('destroy', gtk.main_quit)
+	win.connect('delete-event', w_delete_event)
+	win.add(sw)
+	win.show_all()
+	liveView.open(authUrl)
+	gtk.main()
 
 def parseArguments():
 	if len(sys.argv) < 2:
