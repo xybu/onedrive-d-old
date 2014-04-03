@@ -1,20 +1,18 @@
 #!/usr/bin/env python
 
-from setuptools import setup, find_packages
 import os
+from setuptools import setup, find_packages
 
 pkg_root = os.path.dirname(__file__)
 
-# Error-handling here is to allow package to be built w/o README included
 try:
 	readme = open(os.path.join(pkg_root, 'README.md')).read()
 except IOError:
-	readme = ''
+	readme = 'Please read README.md for more details'
 
 setup(
-
 	name='onedrive-d',
-	version='0.6',
+	version='0.7',
 	author='Xiangyu Bu',
 	author_email='xybu92@live.com',
 	license='MIT',
@@ -22,13 +20,13 @@ setup(
 		'cloud', 'storage', 'storage provider', 'file hosting' ],
 
 	url='http://github.com/xybu92/onedrive-d',
-
-	description='A Microsoft OneDrive daemon written in Python',
+	
+	description='A Microsoft OneDrive client that works for Ubuntu-based Linux',
 	
 	long_description=readme,
-
+	
 	classifiers=[
-		'Development Status :: 3 - Alpha',
+		'Development Status :: 4 - Beta',
 		'Environment :: Console',
 		'Intended Audience :: Developers',
 		'Intended Audience :: System Administrators',
@@ -45,18 +43,13 @@ setup(
 		'Topic :: Utilities'],
 	
 	install_requires = ['PyYAML', 'requests', 'urllib3', 'python-skydrive'],
-	#extras_require=dict(
-	#	standalone=['PyYAML', 'requests', 'urllib3', 'python-skydrive'],
-	#	cli=['PyYAML', 'requests', 'urllib3', 'python-skydrive'],
-	#	conf=['PyYAML', 'requests', 'urllib3', 'python-skydrive']),
-
-	packages=['onedrive'],
-	scripts=['onedrive/onedrive-daemon','onedrive/onedrive-utils'],
+	
+	packages=find_packages(),
 	include_package_data=True,
-	#package_data={'': ['README.md']},
+	scripts=['onedrive/onedrive-daemon','onedrive/onedrive-utils'],
 	exclude_package_data={'': ['README.*']}
 
 	#entry_points=dict(console_scripts=[
-	#	'onedrive-d = onedrive/onedrive.py'])
-	)
+	#	'onedrive-d = onedrive/onedrive-daemon'])
+)
 
