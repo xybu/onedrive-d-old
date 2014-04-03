@@ -100,11 +100,7 @@ def setupDaemon():
 			break
 		else:
 			sys.stdout.write("Failed to create the directory \"" + response + "\". Please specify another one.\n")
-	
-	#print rootPath
-	#TODO: unfinished yet
-	#open(HOME_PATH + "", "r")
-	
+		
 	sh = """
 #!/bin/sh
 
@@ -239,7 +235,7 @@ def authDaemon():
 	sw.add(liveView)
 	liveView.connect("load-finished", liveView_load_finished)
 	win = gtk.Window(gtk.WINDOW_TOPLEVEL)
-	win.set_default_size(360, 500)
+	win.set_default_size(360, 480)
 	win.set_position(gtk.WIN_POS_CENTER)
 	win.connect('destroy', gtk.main_quit)
 	win.connect('delete-event', w_delete_event)
@@ -247,8 +243,8 @@ def authDaemon():
 	win.show_all()
 	liveView.open(authUrl)
 	gtk.main()
-
-def parseArguments():
+		
+if __name__ == "__main__":
 	if len(sys.argv) < 2:
 		print "Usage: onedrive-utils [pkg|setup|auth|all]\n" + " * pkg: install or upgrade pre-requisite packages\n * setup: install and configure onedrive-d\n * auth: authenticate onedrive-d\n * all: do all the steps above"
 		sys.exit(1)
@@ -264,6 +260,4 @@ def parseArguments():
 		installPackages()
 		setupDaemon()
 		authDaemon()
-	
-if __name__ == "__main__":
-	parseArguments()
+		print "All done."
