@@ -26,7 +26,7 @@ setup(
 	long_description=readme,
 	
 	classifiers=[
-		'Development Status :: 4 - Beta',
+		'Development Status :: 3 - Alpha',
 		'Environment :: Console',
 		'Intended Audience :: Developers',
 		'Intended Audience :: System Administrators',
