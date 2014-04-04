@@ -5,8 +5,9 @@
 import sys, os, gc, subprocess, signal, yaml
 import threading, Queue, time
 import re,csv,StringIO
-import calendar
+from calendar import timegm
 from dateutil import parser
+from skydrive import api_v5
 
 # Task class models a generic task to be performed by a TaskWorker
 # Tasks are put in the thread-safe Queue object
@@ -29,7 +30,7 @@ class TaskWorker(threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
 		self.daemon = True
-		print self.getName() + " (worker): initialied"
+		print self.getName() + " (worker): initiated"
 	
 	def getArgs(self, t):
 		return {
@@ -52,7 +53,7 @@ class TaskWorker(threading.Thread):
 		ret = subp.communicate()
 		if t.type == "get":
 			old_mtime = os.stat(t.p1).st_mtime
-			new_mtime = calendar.timegm(parser.parse(t.timeStamp).utctimetuple())
+			new_mtime = timegm(parser.parse(t.timeStamp).utctimetuple())
 			os.utime(t.p1, (new_mtime, new_mtime))
 			new_old_mtime = os.stat(t.p1).st_mtime
 			print self.getName() + ": " + t.p1 + " Old_mtime is " + str(old_mtime) + " and new_mtime is " + str(new_mtime) + " and is changed to " + str(new_old_mtime)
@@ -96,11 +97,19 @@ class DirScanner(threading.Thread):
 	
 	def ls(self):
 		sema.acquire()
-		subp = subprocess.Popen(['skydrive-cli', 'ls', '--objects', self._remotePath], stdout=subprocess.PIPE)
-		log = subp.communicate()[0]
+		#subp = subprocess.Popen(['skydrive-cli', 'ls', '--objects', self._remotePath], stdout=subprocess.PIPE)
+		#log = subp.communicate()[0]
+		try:
+			self._raw_log = list(api.listdir(api.resolve_path(self._remotePath)))
+		except api_v5.DoesNotExists as e:
+			print "Remote path \"" + self._remotePath + "\" does not exist.\n({0}): {1}".format(e.errno, e.strerror)
+		except api_v5.AuthenticationError as e:
+			print "Authentication failed.\n({0}): {1}".format(e.errno, e.strerror)
+		except (api_v5.SkyDriveInteractionError, api_v5.ProtocolError) as e:
+			print "OneDrive API Procotol error.\n({0}): {1}".format(e.errno, e.strerror)
 		sema.release()
-		if log.strip() != "":
-			self._raw_log = yaml.safe_load(log)
+		#if log.strip() != "":
+			#self._raw_log = yaml.safe_load(log)
 	
 	def run(self):
 		self.merge()
@@ -118,6 +127,7 @@ class DirScanner(threading.Thread):
 		else:
 			# if the local path exists, record what is in the local path
 			self._ent_list = os.listdir(self._localPath)
+			# check case sensitivity?
 	
 	# recursively merge the remote files and dirs into local repo
 	def merge(self):
@@ -146,19 +156,18 @@ class DirScanner(threading.Thread):
 				# assert for now
 				assert os.path.isfile(self._localPath + "/" + entry["name"])
 				local_mtime = os.stat(self._localPath + "/" + entry["name"]).st_mtime
-				remote_mtime = calendar.timegm(parser.parse(entry["client_updated_time"]).utctimetuple())
+				remote_mtime = timegm(parser.parse(entry["client_updated_time"]).utctimetuple())
 				if local_mtime == remote_mtime:
 					print self.getName() + ": " + self._localPath + "/" + entry["name"] + " wasn't changed. Skip it."
 					return
 				elif local_mtime > remote_mtime:
 					print self.getName() + ": Local file \"" + self._localPath + "/" + entry["name"] + "\" is newer. Upload it..."
-					taskQueue.put(Task("put", self._localPath + "/" + entry["name"], self._remotePath))
+					taskQueue.put(Task("get", self._localPath + "/" + entry["name"] + "_remote_older", self._remotePath + "/" + entry["name"], entry["client_updated_time"]))
+					# taskQueue.put(Task("put", self._localPath + "/" + entry["name"], self._remotePath))
 				else:
 					print self.getName() + ": Local file \"" + self._localPath + "/" + entry["name"] + "\" is older. Download it..."
-					taskQueue.put(Task("get", self._localPath + "/" + entry["name"], self._remotePath + "/" + entry["name"], entry["client_updated_time"]))
-				
-				#print self.getName() + ": adding task to sync " + self._localPath + "/" + entry["name"]
-				#taskQueue.put(Task("stub", self._localPath + "/" + entry["name"], self._remotePath + "/" + entry["name"]))
+					os.rename(self._localPath + "/" + entry["name"], self._localPath + "/" + entry["name"] + "_local_older")
+					taskQueue.put(Task("get", self._localPath + "/" + entry["name"] + "", self._remotePath + "/" + entry["name"], entry["client_updated_time"]))
 			else:
 				# if not existent, get the file to local repo
 				taskQueue.put(Task("get", self._localPath + "/" + entry["name"], self._remotePath + "/" + entry["name"], entry["client_updated_time"]))
@@ -226,7 +235,7 @@ class LocalMonitor(threading.Thread):
 			exclude_args = ["--exclude", CONF["exclude"]]
 		else:
 			exclude_args = []
-		subp = subprocess.Popen(['inotifywait', '-e', 'unmount,close_write,delete,delete_self,move', '-cmr', self.rootPath] + exclude_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+		subp = subprocess.Popen(['inotifywait', '-e', 'unmount,close_write,delete,move', '-cmr', self.rootPath] + exclude_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 		while True:
 			# I think stdout buffer is fine for now
 			if stopEvent.is_set():
@@ -243,7 +252,7 @@ class LocalMonitor(threading.Thread):
 				for x in csv_entry:
 					self.handle(x)
 			else:
-				print "LocalMon: >>>" + line
+				print "Local_mon: >>>" + line
 		
 # RemoteMonitor periodically fetches the most recent changes from OneDrive remote repo
 # if there are unlocalized changes, generate the tasks
@@ -270,11 +279,13 @@ signal.signal(signal.SIGINT, gracefulExit)
 
 CONF_PATH = "~/.onedrive"
 NUM_OF_WORKERS = 2
-NUM_OF_SCANNERS = 2
+NUM_OF_SCANNERS = 4
 
 f = open(os.path.expanduser(CONF_PATH + "/user.conf"), "r")
 CONF = yaml.safe_load(f)
 f.close()
+
+api = api_v5.PersistentSkyDriveAPI.from_conf("~/.lcrc")
 
 scanner_threads = []
 scanner_threads_lock = threading.Lock()
@@ -297,6 +308,8 @@ for t in scanner_threads:
 	del t
 
 taskQueue.join()
+
+del api
 
 print "main: all done."
 

@@ -45,7 +45,7 @@ setup(
 	install_requires = ['PyYAML', 'requests', 'urllib3', 'python-skydrive'],
 	
 	packages=find_packages(),
-	include_package_data=True,
+	# include_package_data=True,
 	scripts=['onedrive/onedrive-daemon','onedrive/onedrive-utils'],
 	exclude_package_data={'': ['README.*']}
 
