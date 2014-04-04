@@ -1,14 +1,16 @@
 onedrive-d
 ==================
+This project intends to develop an OneDrive (formerly SkyDrive) daemon on (X)ubuntu based on the API of Mike Kazantsev's project `python-skydrive` (https://github.com/mk-fg/python-skydrive).
 
-**This is the Working-in-Progress branch which is under serious reconstruction.**
+While you can use `skydrive-cli` command offered by `python-skydrive` project, the daemon tries to do the work automatically, and GUIs are being developed. Try `skydrive-cli auth` and `sudo onedrive-daemon auth` to see the difference.
+
+Branches
+--------
+ * **master**: the main branch
+ * **wip**: stores the newest work
 
 Description
 -----------
-This project intends to develop an OneDrive (formerly SkyDrive) daemon on (X)ubuntu written in Python.
-
-The program is a higher-level abstraction of the project `python-skydrive` (https://github.com/mk-fg/python-skydrive) by Mike Kazantsev.
-
 Besides the `python-skydrive` base, there are a few major components in the project:
 
  * **DirScanner** scans the differences between the local and remote `dir`s, and merges them if needed
@@ -26,7 +28,7 @@ Besides the `python-skydrive` base, there are a few major components in the proj
  	 * more at http://isdk.dev.live.com/dev/isdk/ISDK.aspx?category=scenarioGroup_skyDrive&index=6
  * **Linux Service**
  	 * A script that binds the python program to /etc/init.d
- 	 * uses `start-stop-daemon` as the service interface _(planned)_
+ 	 * uses `start-stop-daemon` as the service interface _(to-be-tested)_
 
 Notice
 --------
@@ -42,12 +44,12 @@ Installation
 
  - Download the source from GitHub repo
  - In the source directory, run `sudo python setup.py install`
- - Run command `onedrive-utils all` to make sure things get installed properly
+ - Run command `sudo onedrive-utils all` to make sure things get installed properly
+ - If the daemon fails to register, you may run `onedrive-daemon` command to have the daemon start
  
  Notes:
  
- The daemon installation is not done yet. The directions above merely installs onedrive-d
- as a standalone program.
+ The directions above merely installs onedrive-d as a standalone program.
 
 Homepage
 -----------
