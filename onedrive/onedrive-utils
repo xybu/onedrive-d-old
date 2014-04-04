@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import os, sys, yaml, subprocess, platform
+import os, sys, pwd, yaml, subprocess, platform
 import gtk, webkit
 
 # Prepare global variables
@@ -50,6 +50,7 @@ def mkdirIfMissing(path):
 			return False
 		if not os.path.exists(path):
 			os.mkdir(path, 0700)
+			os.chown(path, pwd.getpwnam(OS_USER).pw_uid, pwd.getpwnam(OS_USER).pw_gid)
 			print "Created directory \"" + path + "\"."
 		return True
 	except OSError as e:
@@ -207,8 +208,7 @@ def liveView_load_finished(webview, frame):
 				print "Authentication failed. OneDrive-d will not work."
 				sys.exit(0)
 		else:
-			subp = subprocess.Popen(["sudo", "chown", OS_USER, HOME_PATH + "/.lcrc"])
-			subp.communicate()
+			os.chown(HOME_PATH + "/.lcrc", pwd.getpwnam(OS_USER).pw_uid, pwd.getpwnam(OS_USER).pw_gid)
 			print "Authenticated successfully."
 			gtk.main_quit()
 
@@ -234,7 +234,7 @@ def authDaemon():
 	sw.add(liveView)
 	liveView.connect("load-finished", liveView_load_finished)
 	win = gtk.Window(gtk.WINDOW_TOPLEVEL)
-	win.set_default_size(360, 480)
+	win.set_default_size(360, 500)
 	win.set_position(gtk.WIN_POS_CENTER)
 	win.connect('destroy', gtk.main_quit)
 	win.connect('delete-event', w_delete_event)
