@@ -1,7 +1,11 @@
 onedrive-d
 ==================
 
-**This is the Working-in-Progress branch which is under serious reconstruction.**
+Branches
+--------
+ * **master**: the main branch
+ * **wip**: stores the newest work
+ * **legacy**: old code
 
 Description
 -----------
@@ -42,12 +46,12 @@ Installation
 
  - Download the source from GitHub repo
  - In the source directory, run `sudo python setup.py install`
- - Run command `onedrive-utils all` to make sure things get installed properly
+ - Run command `sudo onedrive-utils all` to make sure things get installed properly
+ - If the daemon fails to register, you may run `onedrive-daemon` command to have the daemon start
  
  Notes:
  
- The daemon installation is not done yet. The directions above merely installs onedrive-d
- as a standalone program.
+ The directions above merely installs onedrive-d as a standalone program.
 
 Homepage
 -----------
