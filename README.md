@@ -2,11 +2,12 @@ onedrive-d
 ==================
 This project intends to develop an OneDrive (formerly SkyDrive) daemon on (X)ubuntu based on the API of Mike Kazantsev's project `python-skydrive` (https://github.com/mk-fg/python-skydrive).
 
+While you can use `skydrive-cli` command offered by `python-skydrive` project, the daemon tries to do the work automatically, and GUIs are being developed. Try `skydrive-cli auth` and `sudo onedrive-daemon auth` to see the difference.
+
 Branches
 --------
  * **master**: the main branch
  * **wip**: stores the newest work
- * **legacy**: old code
 
 Description
 -----------
