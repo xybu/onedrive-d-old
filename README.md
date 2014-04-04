@@ -1,41 +1,53 @@
 onedrive-d
 ==================
 
+**This is the Working-in-Progress branch which is under serious reconstruction.**
+
 Description
 -----------
-This project intends to develop a OneDrive (formerly SkyDrive) daemon on (X)ubuntu with mainly Bash script.
-The server-client interaction is based on python-skydrive (https://github.com/mk-fg/python-skydrive) by Mike Kazantsev.
+This project intends to develop an OneDrive (formerly SkyDrive) daemon on (X)ubuntu written in Python.
+
+The program is a higher-level abstraction of the project `python-skydrive` (https://github.com/mk-fg/python-skydrive) by Mike Kazantsev.
+
+Besides the `python-skydrive` base, there are a few major components in the project:
+
+ * **DirScanner** scans the differences between the local and remote `dir`s, and merges them if needed
+ 	 * It does not delete files.
+ 	 * May undo file deletion or mess up the repo. But by far we prefer the safest approach.
+ * **TaskWorker**
+ 	 * It executes the tasks issued by DirScanner objects
+ 	 * and waits to handle new tasks
+ 	 	 * **Tasks** are wrapped as objects
+ * **LocalMonitor**
+ 	 * It forks a `inotifywait` process to monitor the OneDrive local repository.
+ 	 * and issue tasks for TaskWorkers to perform if there are any changes detected.
+ * **RemoteMonitor**
+ 	 * Periodically gets the most recently changed files from OneDrive server _(planned)_
+ 	 * more at http://isdk.dev.live.com/dev/isdk/ISDK.aspx?category=scenarioGroup_skyDrive&index=6
+ * **Linux Service**
+ 	 * A script that binds the python program to /etc/init.d
+ 	 * uses `start-stop-daemon` as the service interface _(planned)_
 
 Notice
 --------
-* (Mar 30, 2014, by XB) If you encountered an `ImportError` when python imports `PoolManager()`, please use the `inst_pre_requisite.sh` in **wip** branch which patched the problem for now.
-	 * The issue is tracked at https://github.com/mk-fg/python-skydrive/issues/13
 
+* (April 1, 2014, by XB) The program in `wip` branch is now functional. More tests and polishes are needed.
+
+* (Mar 30, 2014, by XB) If you encountered an `ImportError` when python imports `PoolManager()`, please use the `inst_pre_requisite.sh` in **wip** branch which patched the problem for now.
+	 * Update `python-requests` package can also solve the problem.
+	 * The issue is tracked at https://github.com/mk-fg/python-skydrive/issues/13.
 
 Installation
 --------------
-__Please beware that the program is extremely premature to use in real life scenario.__
 
-Execute the command: `sudo ./setup.sh` to install the daemon.
-
-
-File Description
-------------------
-
-`setup.sh`:
-    The installation script. Sudo permission required.
-
-`inst_pre_requisites.sh`:
-	The script to install python-skydrive and its pre-requisite packages
-
-`onedrive-d`:
-	The daemon itself
-
-`synchronize.py`:
-	The synchronizer
-
-`entries.py`:
-	Class definitions for file and directory entries
+ - Download the source from GitHub repo
+ - In the source directory, run `sudo python setup.py install`
+ - Run command `onedrive-utils all` to make sure things get installed properly
+ 
+ Notes:
+ 
+ The daemon installation is not done yet. The directions above merely installs onedrive-d
+ as a standalone program.
 
 Homepage
 -----------
@@ -44,5 +56,4 @@ Please visit: http://www.xybu.me/projects/skydrive-d/
 
 Contact
 --------
-
-Xiangyu Bu
+Xiangyu Bu (http://xybu.me or drop me email: xybu92(at)live.com)
