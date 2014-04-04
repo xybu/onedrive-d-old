@@ -1,5 +1,6 @@
 onedrive-d
 ==================
+This project intends to develop an OneDrive (formerly SkyDrive) daemon on (X)ubuntu based on the API of Mike Kazantsev's project `python-skydrive` (https://github.com/mk-fg/python-skydrive).
 
 Branches
 --------
@@ -9,10 +10,6 @@ Branches
 
 Description
 -----------
-This project intends to develop an OneDrive (formerly SkyDrive) daemon on (X)ubuntu written in Python.
-
-The program is a higher-level abstraction of the project `python-skydrive` (https://github.com/mk-fg/python-skydrive) by Mike Kazantsev.
-
 Besides the `python-skydrive` base, there are a few major components in the project:
 
  * **DirScanner** scans the differences between the local and remote `dir`s, and merges them if needed
@@ -30,7 +27,7 @@ Besides the `python-skydrive` base, there are a few major components in the proj
  	 * more at http://isdk.dev.live.com/dev/isdk/ISDK.aspx?category=scenarioGroup_skyDrive&index=6
  * **Linux Service**
  	 * A script that binds the python program to /etc/init.d
- 	 * uses `start-stop-daemon` as the service interface _(planned)_
+ 	 * uses `start-stop-daemon` as the service interface _(to-be-tested)_
 
 Notice
 --------
