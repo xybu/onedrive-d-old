@@ -13,3 +13,9 @@ This iteration aims to
 Progress
 --------
 Oops...
+
+Pending Requirements
+--------------------
+apt-get install python-appindicator // in indicator.py
+sudo pip install py-notify // in newui.py, Ubuntu may have preinstalled it.
+sudo apt-get install python-dev // in newui.py, may not be necessary for Ubuntu

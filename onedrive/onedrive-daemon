@@ -8,6 +8,7 @@ import re,csv,StringIO
 from calendar import timegm
 from dateutil import parser
 from skydrive import api_v5
+import ui
 
 # Task class models a generic task to be performed by a TaskWorker
 # Tasks are put in the thread-safe Queue object
@@ -316,6 +317,9 @@ print "main: all done."
 # Main thread then should create monitor and let workers continually consume the queue
 
 print "main: create monitor"
+
+#ui.TrayIcon(CONF["rootPath"])
+#gtk.main()
 
 local_mon = LocalMonitor()
 local_mon.start()

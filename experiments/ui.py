@@ -6,18 +6,21 @@ import gtk
 class SettingsWindow(gtk.Window):
 	def __init__(self):
 		super(SettingsWindow, self).__init__()
-
-		self.set_title("Settings | OneDrive daemon")
+		
+		self.set_title("Settings | OneDrive Daemon")
 		self.set_position(gtk.WIN_POS_CENTER)
 		self.set_default_size(640, 600)
 		self.set_geometry_hints(min_width=640, min_height=600)
 		self.set_icon_from_file("./res/icon_256.png")
 		self.connect("destroy", self.window_destroy)
 		
-		box = gtk.VBox()
-		button = gtk.Button("Test Button")
-		box.pack_start(button, False)
-		self.add(box)
+		#box = gtk.VBox()
+		#button = gtk.Button("Test Button")
+		#box.pack_start(button, False)
+		#self.add(box)
+		
+		text = gtk.Entry()
+		self.add(text)
 		
 		self.show_all()
 		
@@ -48,7 +51,7 @@ class TrayIcon(gtk.StatusIcon):
 		menu.append(quit_item)
 		menu.show_all()
 
-		self.connect("activate", self.show_settings_window)
+		self.connect("activate", self.show_local_repo)
 		self.connect('popup-menu', self.icon_clicked)
 	
 	def show_local_repo(self, widget, event=None):
@@ -64,10 +67,9 @@ class TrayIcon(gtk.StatusIcon):
 		sys.exit(0)
 
 if __name__ == "__main__":
-	
 	f = open(os.path.expanduser("~/.onedrive/user.conf"), "r")
 	CONF = yaml.safe_load(f)
 	f.close()
-
+	
 	TrayIcon(CONF["rootPath"])
 	gtk.main()
