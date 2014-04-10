@@ -12,6 +12,7 @@ import config
 import components
 import onedrive
 
+gtk.gdk.threads_init()
 gobject.threads_init()
 
 def printLog(text):
@@ -28,7 +29,7 @@ class OneDrive_StatusIcon(gtk.StatusIcon):
 		self.API = api
 		self._icon_pixbuf = gtk.gdk.pixbuf_new_from_file("./res/icon_256.png")
 		self.set_from_pixbuf(self._icon_pixbuf)
-		self.set_tooltip('onedrive-d loading...')
+		self.set_tooltip('onedrive-d')
 		self.connect("activate", self.e_show_root)
 		self.connect("popup-menu", self.e_click_icon)
 		self.set_visible(True)
@@ -93,10 +94,8 @@ class OneDrive_StatusIcon(gtk.StatusIcon):
 	def e_start_daemon(self):
 		
 		gobject.source_remove(self._timer)
-		
-		print "woo!"
-		
 		components.API = self.API
+		components.AGENT = self
 		
 		for i in range(config.NUM_OF_WORKERS):
 			w = components.TaskWorker()
@@ -104,19 +103,9 @@ class OneDrive_StatusIcon(gtk.StatusIcon):
 			w.start()
 		
 		components.DirScanner(config.CONF["rootPath"], "").start()
+		components.Waiter().start()
 		
-		while not config.SCANNER_QUEUE.empty():
-			t = config.SCANNER_QUEUE.get()
-			config.SCANNER_QUEUE.task_done()
-			t.join()
-			del t
-		
-		config.TASK_QUEUE.join()
-		gc.collect()
-		
-		self.set_tooltip('onedrive-d')
-		
-		print "done."
+		print "main: All threads should have started."
 			
 	def e_click_icon(self, status, button, time):
 		self.menu.popup(None, None, None, button, time)
@@ -135,7 +124,7 @@ class OneDrive_StatusIcon(gtk.StatusIcon):
 	def e_show_message(self, widget=None, event=None):
 		self.add_message("Title", "This is a test message!")
 	
-	def add_message(self, title, text, icon = "notification-message-im", timeout = 2000):
+	def add_message(self, title, text, icon = "notification-message-im", timeout = 4000):
 		if not self._pynotify_flag and not pynotify.init ("icon-summary-body"):
 			return
 		self.last_message = pynotify.Notification(title, text, icon)

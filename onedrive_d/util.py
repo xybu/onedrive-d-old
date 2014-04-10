@@ -92,7 +92,7 @@ def setupDaemon():
 			break
 		else:
 			sys.stdout.write("Failed to create the directory \"" + response + "\". Please specify another one.\n")
-		
+	
 	sh = """
 #!/bin/sh
 
@@ -164,16 +164,11 @@ exit 0
 	print "Daemon script has been written to /etc/init.d/onedrive-d"
 	
 	print "Finished setting up the program."
-	
-if __name__ == "__main__":
-	if len(sys.argv) < 2:
-		print "Usage: sudo onedrive-utils [setup|all]\n" + " * pkg: install or upgrade pre-requisite packages\n * setup: install and configure onedrive-d\n * all: do all the steps above"
-		sys.exit(1)
+
+def main():
 	checkOSVersion()
-	argv = sys.argv
-	if argv[1] == "setup":
-		setupDaemon()
-	elif argv[1] == "all":
-		installPackages()
-		setupDaemon()
-		print "All done."
+	setupDaemon()
+	print "All done."
+
+if __name__ == "__main__":
+	main()

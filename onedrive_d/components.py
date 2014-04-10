@@ -9,6 +9,8 @@ import threading
 import Queue
 import subprocess
 import signal
+import StringIO
+import csv
 from config import *
 from calendar import timegm
 from dateutil import parser
@@ -73,6 +75,9 @@ class TaskWorker(threading.Thread):
 			"rm": ["rm", t.p2]
 		}[t.type]
 	
+	def getMessage(self, t):
+		pass
+	
 	def consume(self, t):
 		args = self.getArgs(t)
 		subp = subprocess.Popen(['onedrive-cli'] + args, stdout=subprocess.PIPE)
@@ -96,12 +101,15 @@ class TaskWorker(threading.Thread):
 					TASK_QUEUE.put(Task("put", t.p1 + "/" + entry, t.p2 + "/" + entry))
 				else:	# a dir
 					TASK_QUEUE.put(Task("mkdir", t.p1 + "/" + entry, t.p2 + "/" + entry))
-			
+		
 		if ret[0] != None and ret[0] != "":
 			print("subprocess stdout: " + ret[0])
 		if ret[1] != None and ret[0] != "":
 			print("subprocess stderr: " + ret[1])
 		print(self.getName() + ": executed task: " + t.debug())
+		
+		AGENT.add_message(title = "OneDrive-d", text = t.p2 + " was updated.")
+		del t
 	
 	def run(self):
 		while True:
@@ -120,10 +128,11 @@ class TaskWorker(threading.Thread):
 class DirScanner(threading.Thread):
 	def __init__(self, localPath, remotePath):
 		threading.Thread.__init__(self)
-		self.daemon = True
 		SCANNER_QUEUE.put(self)
+		self.daemon = True
 		self._localPath = localPath
 		self._remotePath = remotePath
+		self._raw_log = None
 	
 	def ls(self):
 		SCANNER_SEMA.acquire()
@@ -230,12 +239,10 @@ class DirScanner(threading.Thread):
 # when an event is issued, parse it and add work to the task queue.
 class LocalMonitor(threading.Thread):
 	MONITOR_SLEEP_INTERVAL = 2 # in seconds
-	EVENT_ON_HOLD = None
 	
 	def __init__(self):
 		threading.Thread.__init__(self)
-		import StringIO
-		import csv
+		self.daemon = True
 		self.rootPath = CONF["rootPath"]
 	
 	def handle(self, logItem):
@@ -245,14 +252,14 @@ class LocalMonitor(threading.Thread):
 		object = logItem[2]
 		
 		if "MOVED_TO" in event:
-			taskQueue.put(Task("put", dir + object, dir.replace(self.rootPath, "")))
+			TASK_QUEUE.put(Task("put", dir + object, dir.replace(self.rootPath, "")))
 		elif "MOVED_FROM" in event:
-			taskQueue.put(Task("rm", "", dir.replace(self.rootPath, "") + object))
+			TASK_QUEUE.put(Task("rm", "", dir.replace(self.rootPath, "") + object))
 		elif "DELETE" in event:
-			taskQueue.put(Task("rm", "", dir.replace(self.rootPath, "") + object))
+			TASK_QUEUE.put(Task("rm", "", dir.replace(self.rootPath, "") + object))
 		elif "CLOSE_WRITE" in event:
-			taskQueue.put(Task("put", dir + object, dir.replace(self.rootPath, "")))
-		
+			TASK_QUEUE.put(Task("put", dir + object, dir.replace(self.rootPath, "")))
+	
 	def run(self):
 		if "exclude" in CONF:
 			exclude_args = ["--exclude", CONF["exclude"]]
@@ -261,13 +268,11 @@ class LocalMonitor(threading.Thread):
 		subp = subprocess.Popen(['inotifywait', '-e', 'unmount,close_write,delete,move', '-cmr', self.rootPath] + exclude_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 		while True:
 			# I think stdout buffer is fine for now
-			if stopEvent.is_set():
+			if EVENT_STOP.is_set():
 				subp.terminate()
 				break
 			line = subp.stdout.readline()
 			if line == "":
-				if self.EVENT_ON_HOLD != None:
-					self.handle(self.EVENT_ON_HOLD)
 				time.sleep(self.MONITOR_SLEEP_INTERVAL)
 			elif line[0] == "/":
 				line = line.rstrip()
@@ -279,11 +284,37 @@ class LocalMonitor(threading.Thread):
 		
 # RemoteMonitor periodically fetches the most recent changes from OneDrive remote repo
 # if there are unlocalized changes, generate the tasks
+# But how to prevent it from adding duplicate tasks to LocalMonitor?
+# How does it know the new changes is just made by TaskWorker?
 class RemoteMonitor(threading.Thread):
 	MONITOR_SLEEP_INTERVAL = 2 # in seconds
 	
-	def __init__(self, rootPath):
+	def __init__(self):
 		threading.Thread.__init__(self)
+		self.daemon = True
+		self.rootPath = CONF["rootPath"]
 	
 	def run(self):
 		pass
+
+class Waiter(threading.Thread):
+	
+	def __init__(self):
+		threading.Thread.__init__(self)
+		self.daemon = True
+	
+	def run(self):
+		while not SCANNER_QUEUE.empty():
+			t = SCANNER_QUEUE.get()
+			SCANNER_QUEUE.task_done()
+			t.join()
+			del t
+		
+		TASK_QUEUE.join()
+		
+		LocalMonitor().start()
+		RemoteMonitor().start()
+		
+		gc.collect()
+		
+		print "Waiter quit."

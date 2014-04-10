@@ -21,7 +21,7 @@ def OneDrive_loadAuthPage(webview, frame, data=None):
 			print "Authentication failed."
 			sys.exit(1)
 
-if __name__ == "__main__":
+def main():
 	if not os.path.exists(config.HOME_PATH + "/.lcrc"):
 		f = open(config.HOME_PATH + "/.lcrc", "w")
 		f.write("client:\n  id: " + config.APP_CREDS[0] + "\n  secret: " + config.APP_CREDS[1] + "\n")
@@ -41,4 +41,7 @@ if __name__ == "__main__":
 	win.show_all()
 	liveView.open(API.auth_user_get_url() + "&display=touch")
 	gtk.main()
+
+if __name__ == "__main__":
+	main()
 

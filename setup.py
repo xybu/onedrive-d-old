@@ -50,6 +50,7 @@ setup(
 
 	entry_points = dict(console_scripts=[
 		'onedrive-d = onedrive_d.daemon:main', 
-		'onedrive-auth = onedrive_d.auth'])
+		'onedrive-auth = onedrive_d.auth:main', 
+		'onedrive-util = onedrive_d.util:main'])
 )
 
