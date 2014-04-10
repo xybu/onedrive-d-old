@@ -28,7 +28,9 @@ class OneDrive_StatusIcon(gtk.StatusIcon):
 		gtk.StatusIcon.__init__(self)
 		self.API = api
 		self._recent_change_lock = threading.Lock()
-		self._icon_pixbuf = gtk.gdk.pixbuf_new_from_file("./res/icon_256.png")
+		
+		self._icon_pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.dirname(__file__) + "/res/icon_256.png")
+		
 		self.set_from_pixbuf(self._icon_pixbuf)
 		self.set_tooltip('onedrive-d')
 		self.connect("activate", self.e_show_root)
@@ -154,6 +156,8 @@ class OneDrive_StatusIcon(gtk.StatusIcon):
 		gtk.main_quit()
 
 def main():
+	global API	
+	
 	gc.enable()
 	try:
 		API = onedrive.api_v5.PersistentOneDriveAPI.from_conf("~/.lcrc")
@@ -162,7 +166,7 @@ def main():
 		config.QUOTA["total"] = quota[1]
 		config.AUTHENTICATED = True
 	except (IOError, onedrive.api_v5.AuthenticationError) as e:
-		subp = subprocess.Popen(["./auth.py"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		subp = subprocess.Popen(["onedrive-auth"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		ret = subp.communicate()
 		print ret[0]
 		print ret[1]

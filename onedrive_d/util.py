@@ -106,8 +106,8 @@ def setupDaemon():
 # Description:       Enable service provided by daemon.
 ### END INIT INFO
 
-DAEMON_NAME=onedrive-daemon
-DAEMON_PATH=/usr/local/bin/onedrive-daemon
+DAEMON_NAME=onedrive-d
+DAEMON_PATH=`whereis onedrive-d | cut -d ' ' -f2 | cat -`
 
 DAEMON_USER="$SUDO_USER"
 if [ "${#DAEMON_USER}" -eq "0" ]; then

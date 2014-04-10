@@ -17,11 +17,16 @@ def OneDrive_loadAuthPage(webview, frame, data=None):
 			win.hide_all()
 			gtk.main_quit()
 			print "Authentication succeeded."
-		except:
+		except api_v5.AuthenticationError as e:
 			print "Authentication failed."
 			sys.exit(1)
 
 def main():
+	global API
+	global win
+	global liveView
+	
+	print config.HOME_PATH
 	if not os.path.exists(config.HOME_PATH + "/.lcrc"):
 		f = open(config.HOME_PATH + "/.lcrc", "w")
 		f.write("client:\n  id: " + config.APP_CREDS[0] + "\n  secret: " + config.APP_CREDS[1] + "\n")
