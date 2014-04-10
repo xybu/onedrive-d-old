@@ -5,7 +5,7 @@ case "$1" in
 	install)
 		# sudo apt-get update && apt-get upgrade
 		sudo apt-get -y install dpkg git python-pip python-yaml python-dateutil inotify-tools python-webkit
-		sudo pip install git+https://github.com/mk-fg/python-skydrive.git#egg=python-skydrive[standalone] --upgrade
+		sudo pip install 'git+https://github.com/mk-fg/python-onedrive.git#egg=python-onedrive' --upgrade
 		sudo python setup.py install
 		onedrive-util
 		;;
