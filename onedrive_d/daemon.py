@@ -153,7 +153,7 @@ class OneDrive_StatusIcon(gtk.StatusIcon):
 			w.join()
 		gtk.main_quit()
 
-if __name__ == "__main__":
+def main():
 	gc.enable()
 	try:
 		API = onedrive.api_v5.PersistentOneDriveAPI.from_conf("~/.lcrc")
@@ -186,3 +186,6 @@ if __name__ == "__main__":
 		sys.exit(1)
 	
 	OneDrive_StatusIcon(API).run()
+
+if __name__ == "__main__":
+	main()
