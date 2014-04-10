@@ -3,16 +3,14 @@
 import os
 from setuptools import setup, find_packages
 
-pkg_root = os.path.dirname(__file__)
-
 try:
-	readme = open(os.path.join(pkg_root, 'README.md')).read()
+	readme = open(os.path.join(os.path.dirname(__file__), 'README.md')).read()
 except IOError:
 	readme = 'Please read README.md for more details'
 
 setup(
 	name='onedrive-d',
-	version='0.7',
+	version='0.7.1',
 	author='Xiangyu Bu',
 	author_email='xybu92@live.com',
 	license='MIT',
@@ -42,14 +40,16 @@ setup(
 		'Topic :: System :: Filesystems',
 		'Topic :: Utilities'],
 	
-	install_requires = ['PyYAML', 'requests', 'urllib3', 'python-skydrive'],
+	install_requires = ['PyYAML', 'requests', 'urllib3', 'python-onedrive'],
 	
 	packages=find_packages(),
-	# include_package_data=True,
-	scripts=['onedrive/onedrive-daemon','onedrive/onedrive-utils'],
-	exclude_package_data={'': ['README.*']}
+	include_package_data=True,
+	package_data={'onedrive_d': ['res/*.png']},
+	#scripts=['daemon/onedrive-daemon','daemon/onedrive-utils'],
+	exclude_package_data={'': ['README.*']},
 
-	#entry_points=dict(console_scripts=[
-	#	'onedrive-d = onedrive/onedrive-daemon'])
+	entry_points = dict(console_scripts=[
+		'onedrive-d = onedrive_d.daemon:main', 
+		'onedrive-auth = onedrive_d.auth'])
 )
 
