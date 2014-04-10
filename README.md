@@ -40,12 +40,6 @@ Notice
 	 * Combined the UI experiments to the daemon
 	 * Changed API and internal naming to reflect the renaming of `python-onedrive` project
 
-* (April 1, 2014) The program in `wip` branch is now functional. More tests and polishes are needed.
-
-* (Mar 30, 2014) If you encountered an `ImportError` when python imports `PoolManager()`, please use the `inst_pre_requisite.sh` in **wip** branch which patched the problem for now.
-	 * Update `python-requests` package can also solve the problem.
-	 * The issue is tracked at https://github.com/mk-fg/python-onedrive/issues/13.
-
 Installation
 --------------
 
@@ -65,4 +59,4 @@ Please visit: http://www.xybu.me/projects/skydrive-d/
 
 Contact
 --------
-Xiangyu Bu (http://xybu.me or drop me email: xybu92(at)live.com)
+Xiangyu Bu (http://xybu.me) or drop me email: xybu92(at)live.com)
