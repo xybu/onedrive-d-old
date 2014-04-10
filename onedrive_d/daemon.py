@@ -27,6 +27,7 @@ class OneDrive_StatusIcon(gtk.StatusIcon):
 	def __init__(self, api):
 		gtk.StatusIcon.__init__(self)
 		self.API = api
+		self._recent_change_lock = threading.Lock()
 		self._icon_pixbuf = gtk.gdk.pixbuf_new_from_file("./res/icon_256.png")
 		self.set_from_pixbuf(self._icon_pixbuf)
 		self.set_tooltip('onedrive-d')
@@ -123,6 +124,11 @@ class OneDrive_StatusIcon(gtk.StatusIcon):
 	
 	def e_show_message(self, widget=None, event=None):
 		self.add_message("Title", "This is a test message!")
+	
+	def add_recent_change_item(self, path, description):
+		self._recent_change_lock.acquire()
+		self._recent_changes.append([path, description])
+		self._recent_change_lock.release()
 	
 	def add_message(self, title, text, icon = "notification-message-im", timeout = 4000):
 		if not self._pynotify_flag and not pynotify.init ("icon-summary-body"):
