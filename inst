@@ -1,0 +1,36 @@
+#!/bin/bash
+
+case "$1" in
+
+	install)
+		# sudo apt-get update && apt-get upgrade
+		sudo apt-get -y install dpkg git python-pip python-yaml python-dateutil inotify-tools python-webkit
+		sudo pip install 'git+https://github.com/mk-fg/python-onedrive.git#egg=python-onedrive' --upgrade
+		sudo python setup.py install
+		onedrive-util
+		;;
+	
+	uninstall)
+		do_stop
+		do_start
+		;;
+	
+	remove_old)
+		sudo pip uninstall onedrive-d
+		;;
+	
+	sweep)
+		killall -9 onedrive-d
+		killall -9 inotifywait
+		killall -9 python
+		;;
+	
+	*)
+		echo "Usage: ./inst {install|uninstall|remove_old}"
+		exit 1
+		;;
+	
+esac
+
+exit 0
+

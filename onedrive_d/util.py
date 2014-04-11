@@ -1,12 +1,6 @@
 #!/usr/bin/python
 
 import os, sys, pwd, yaml, subprocess, platform
-import gtk, webkit
-
-# Prepare global variables
-
-APP_CLIENT_ID = "000000004010C916"
-APP_SECRET = "PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi"
 
 HOME_PATH = os.path.expanduser("~")
 OS_USER = os.getenv("SUDO_USER")
@@ -19,9 +13,6 @@ else:
 	HOME_PATH = os.path.split(HOME_PATH)[0] + "/" + OS_USER
 
 OS_DIST =  platform.linux_distribution()
-
-APTITUDE_PKG_DEPENDENCIES = ["dpkg", "git", "python-pip", "libyaml-dev", "python-yaml", "python-dateutil", "inotify-tools", "python-webkit"]
-PIP_PKG_DEPENDENCIES = ["urllib3", "requests"]
 
 def queryUser(question, answer = "y"):
 	valid = {"y": True, "ye": True, "yes": True,
@@ -101,7 +92,7 @@ def setupDaemon():
 			break
 		else:
 			sys.stdout.write("Failed to create the directory \"" + response + "\". Please specify another one.\n")
-		
+	
 	sh = """
 #!/bin/sh
 
@@ -115,8 +106,8 @@ def setupDaemon():
 # Description:       Enable service provided by daemon.
 ### END INIT INFO
 
-DAEMON_NAME=onedrive-daemon
-DAEMON_PATH=/usr/local/bin/onedrive-daemon
+DAEMON_NAME=onedrive-d
+DAEMON_PATH=`whereis onedrive-d | cut -d ' ' -f2 | cat -`
 
 DAEMON_USER="$SUDO_USER"
 if [ "${#DAEMON_USER}" -eq "0" ]; then
@@ -173,90 +164,11 @@ exit 0
 	print "Daemon script has been written to /etc/init.d/onedrive-d"
 	
 	print "Finished setting up the program."
-	
-def installPackages():
-	if queryUser("Do you want to run apt-get update && apt-get upgrade?", "y"):
-		subprocess.Popen(["sudo", "apt-get", "update"]).communicate()
-		subprocess.Popen(["sudo", "apt-get", "upgrade"]).communicate()
-		print "System package list has been updated successfully."
-	
-	print "Now install pre-requisite system packages..."
-	subp = subprocess.Popen(["sudo", "apt-get", "-y", "install"] + APTITUDE_PKG_DEPENDENCIES)
-	subp.communicate()
-	assert subp.returncode == 0
-	
-	print "Now install the required PIP packages..."
-	for p in PIP_PKG_DEPENDENCIES:
-		subprocess.Popen(["sudo", "pip", "install", p, "--upgrade"]).communicate()
-	
-	print "Now install python-skydrive package..."
-	subprocess.Popen(["sudo", "pip", "install", "git+https://github.com/mk-fg/python-skydrive.git#egg=python-skydrive[standalone]", "--upgrade"]).communicate()
-	
-	print "All the pre-requisite packages have been installed / upgraded."
 
-def liveView_load_finished(webview, frame):
-	url = frame.get_uri()
-	if "https://login.live.com/oauth20_desktop.srf" in url:
-		subp = subprocess.Popen(["skydrive-cli", "auth", url])
-		ret = subp.communicate()
-		if subp.returncode != 0:
-			if queryUser("Authentication failed. Do you want to retry?", "y"):
-				# subp.kill()
-				gtk.main_quit()
-				authDaemon()
-			else:
-				print "Authentication failed. OneDrive-d will not work."
-				sys.exit(0)
-		else:
-			os.chown(HOME_PATH + "/.lcrc", pwd.getpwnam(OS_USER).pw_uid, pwd.getpwnam(OS_USER).pw_gid)
-			print "Authenticated successfully."
-			gtk.main_quit()
-
-def w_delete_event(widget, event, data=None):
-	print "Authentication window closed."
-	widget.destroy()
-	gtk.main_quit()
-	return False
-
-def authDaemon():
-	print "Authenticating..."
-	
-	# write down app information
-	f = open(HOME_PATH + "/.lcrc", "w")
-	f.write("client:\n  id: " + APP_CLIENT_ID + "\n  secret: " + APP_SECRET + "\n")
-	f.close()
-	
-	from skydrive import api_v5, conf
-	authUrl = api_v5.PersistentSkyDriveAPI.from_conf(None).auth_user_get_url() + "&display=touch"
-	
-	liveView = webkit.WebView()
-	sw = gtk.ScrolledWindow()
-	sw.add(liveView)
-	liveView.connect("load-finished", liveView_load_finished)
-	win = gtk.Window(gtk.WINDOW_TOPLEVEL)
-	win.set_default_size(360, 500)
-	win.set_position(gtk.WIN_POS_CENTER)
-	win.connect('destroy', gtk.main_quit)
-	win.connect('delete-event', w_delete_event)
-	win.add(sw)
-	win.show_all()
-	liveView.open(authUrl)
-	gtk.main()
-		
-if __name__ == "__main__":
-	if len(sys.argv) < 2:
-		print "Usage: sudo onedrive-utils [pkg|setup|auth|all]\n" + " * pkg: install or upgrade pre-requisite packages\n * setup: install and configure onedrive-d\n * auth: authenticate onedrive-d\n * all: do all the steps above"
-		sys.exit(1)
+def main():
 	checkOSVersion()
-	argv = sys.argv
-	if argv[1] == "setup":
-		setupDaemon()
-	elif argv[1] == "pkg":
-		installPackages()
-	elif argv[1] == "auth":
-		authDaemon()
-	elif argv[1] == "all":
-		installPackages()
-		setupDaemon()
-		authDaemon()
-		print "All done."
+	setupDaemon()
+	print "All done."
+
+if __name__ == "__main__":
+	main()
