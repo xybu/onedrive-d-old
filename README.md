@@ -2,7 +2,7 @@ onedrive-d
 ==================
 This project intends to develop an OneDrive (formerly SkyDrive) daemon on (X)ubuntu based on the API of Mike Kazantsev's project `python-onedrive` (https://github.com/mk-fg/python-onedrive).
 
-While you can use `onedrive-cli` command offered by `python-skydrive` project, the daemon tries to do the work automatically, and GUIs are being developed.
+While you can use `onedrive-cli` command offered by `python-onedrive` project, the daemon tries to do the work automatically, and GUIs are being developed.
 
 Branches
 --------
@@ -11,8 +11,6 @@ Branches
 
 Description
 -----------
-
-**need to be updated**
 
 Besides the `python-onedrive` base, there are a few major components in the project:
 
@@ -30,8 +28,7 @@ Besides the `python-onedrive` base, there are a few major components in the proj
  	 * Periodically gets the most recently changed files from OneDrive server _(planned)_
  	 * more at http://isdk.dev.live.com/dev/isdk/ISDK.aspx?category=scenarioGroup_skyDrive&index=6
  * **Linux Service**
- 	 * A script that binds the python program to /etc/init.d
- 	 * uses `start-stop-daemon` as the service interface _(to-be-tested)_
+ 	 * The service will be installed to `/etc/init.d/onedrive-d`
 
 Notice
 --------
@@ -44,13 +41,12 @@ Installation
 --------------
 
  - Download the source from GitHub repo
- - In the source directory, run `./inst install`
- - Run command `sudo onedrive-utils setup` to make sure things get installed properly
+ - In the source directory, run `sudo ./inst install` and go with the prompts
  - If the daemon fails to register, you may run `onedrive-d` command to have the daemon start
  
  Notes:
  
- The directions above merely installs onedrive-d as a standalone program.
+ Since the package is still under development, it will not run at system startup.
 
 Homepage
 -----------
@@ -59,4 +55,6 @@ Please visit: http://www.xybu.me/projects/skydrive-d/
 
 Contact
 --------
-Xiangyu Bu (http://xybu.me) or drop me email: xybu92(at)live.com)
+Xiangyu Bu
+	 * website: http://xybu.me
+	 * email: xybu92(at)live.com
