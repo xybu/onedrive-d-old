@@ -64,31 +64,41 @@ def setupDaemon():
 	exclusion_list = []
 	
 	if queryUser("Do you want to exclude some files from being synchronized? ", "y"):
-		if queryUser("\t1. Do you want to exclude ViM temporary files?", "y"):
-			exclusion_list = exclusion_list + ".*~|\.netrwhist|\.directory|Session\.vim|[._]*.s[a-w][a-z]|[._]s[a-w][a-z]|.*\.un~".split("|")
-		if queryUser("\t2. Do you want to exclude emacs temporary files?", "y"):
+		if queryUser("\t1. Exclude Windows temporary files like \"Desktop.ini?\"", "y"):
+			exclusion_list = exclusion_list + "~\$.*\.*|.*\.laccdb|Desktop\.ini|Thumbs\.db|EhThumbs\.db".split("|")
+		if queryUser("\t2. Exclude typical Linux temporary files?", "y"):
+			exclusion_list = exclusion_list + ".*~|\.lock".split("|")
+		if queryUser("\t3. Exclude ViM temporary files?", "y"):
+			exclusion_list = exclusion_list + ".netrwhist|\.directory|Session\.vim|[._]*.s[a-w][a-z]|[._]s[a-w][a-z]|.*\.un~".split("|")
+		if queryUser("\t4. Exclude emacs temporary files?", "y"):
 			exclusion_list = exclusion_list + "\#.*\#|\.emacs\.desktop|\.emacs\.desktop\.lock|.*\.elc|/auto-save-list|\.\#.*|\.org-id-locations|.*_flymake\..*".split("|")
-		if queryUser("\t3. Do you want to exclude possibly Mac OS X temporary files?", "y"):
-			exclusion_list = exclusion_list + "\.DS_Store|\.AppleDouble|\.LSOverride|\._.*|\.Spotlight-V100|\.Trashes".split("|")
+		if queryUser("\t5. Exclude possibly Mac OS X temporary files?", "y"):
+			exclusion_list = exclusion_list + "\.DS_Store|Icon\r|\.AppleDouble|\.LSOverride|\._.*|\.Spotlight-V100|\.Trashes".split("|")
 		
 		if exclusion_list != []:
 			exclusion_list = "exclude: ^(" + "|".join(exclusion_list) + ")$\n"
 		else:
+			exclusion_list = "exclude: \"\""
 			print "There is nothing in the exclusion list."
 	else:
+		exclusion_list = "exclude: \"\""
 		print "Skipped."
 	
 	while True:
-		sys.stdout.write("Please specify the directory to sync with OneDrive (default: " + HOME_PATH + "/OneDrive):\n")
+		sys.stdout.write("Please specify the local directory of OneDrive (default:" + HOME_PATH + "/OneDrive):\n")
 		response = raw_input().strip()
+		if response == None or response == "\n" or response == "":
+			response = HOME_PATH + "/OneDrive"
 		if mkdirIfMissing(response):
-			f = open(HOME_PATH + "/.onedrive/user.conf", "w")
+			CONF_PATH = HOME_PATH + "/.onedrive/user.conf"
+			f = open(CONF_PATH, "w")
 			rootPath = os.path.abspath(response)
 			f.write("rootPath: " + rootPath + "\n")
-			if exclusion_list != "":
-				f.write(exclusion_list)
-			f.write("confVer: 0.6\n")
+			f.write(exclusion_list)
+			f.write("confVer: 0.7\n")
 			f.close()
+			os.chown(CONF_PATH, pwd.getpwnam(OS_USER).pw_uid, pwd.getpwnam(OS_USER).pw_gid)
+			os.chmod(CONF_PATH, 0600)
 			break
 		else:
 			sys.stdout.write("Failed to create the directory \"" + response + "\". Please specify another one.\n")

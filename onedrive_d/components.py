@@ -16,9 +16,8 @@ from calendar import timegm
 from dateutil import parser
 from onedrive import api_v5
 
-# logging.debug('This message should go to the log file')
-# print('So should this')
-# logging.warning('And this, too')
+TEMP_EXCLUSION_LIST = []
+TEMP_EXCLUSION_LOCK = threading.Lock()
 
 # rename files that have same name in lowecase
 # and return a dictionary of the new file names
@@ -287,7 +286,7 @@ class LocalMonitor(threading.Thread):
 # But how to prevent it from adding duplicate tasks to LocalMonitor?
 # How does it know the new changes is just made by TaskWorker?
 class RemoteMonitor(threading.Thread):
-	MONITOR_SLEEP_INTERVAL = 2 # in seconds
+	PULL_INTERVAL = 2 # in seconds
 	
 	def __init__(self):
 		threading.Thread.__init__(self)
