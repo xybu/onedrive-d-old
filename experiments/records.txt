@@ -1,0 +1,80 @@
+REMOTE_ID= Unknown , IS_FILE= 0 , PATH= /home/xb/OneDrive , SIZE= 0 , MTIME= 0 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/hello.exe , SIZE= 90096 , MTIME= 1385433457 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/essay.pdf , SIZE= 164200 , MTIME= 1385433456 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/LICENSE , SIZE= 458 , MTIME= 1397117509 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/merge_log.txt , SIZE= 29999 , MTIME= 1396373101 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/essay.docx , SIZE= 89554 , MTIME= 1385433454 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/in-class journal.jnt , SIZE= 10072 , MTIME= 1385433459 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/hello.s , SIZE= 548 , MTIME= 1385433458 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/this file contains spaces , SIZE= 0 , MTIME= 1396333060 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/backup.c , SIZE= 36 , MTIME= 1396564298 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/LICENSE (CONFLICT_1) , SIZE= 458 , MTIME= 1397108445 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/testA , SIZE= 0 , MTIME= 1397151104 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/copy of copy_text , SIZE= 415 , MTIME= 1396563447 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/arribba.wav , SIZE= 41094 , MTIME= 1396573742 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/weird,_file_name_with_a,comma , SIZE= 0 , MTIME= 1396334101 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/copy_text , SIZE= 415 , MTIME= 1396563163 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/README.md , SIZE= 2337 , MTIME= 1396563564 
+
+REMOTE_ID= Unknown , IS_FILE= 0 , PATH= /home/xb/OneDrive/engl106 , SIZE= 0 , MTIME= 0 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/engl106/essay.pdf , SIZE= 164200 , MTIME= 1385433447 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/engl106/essay.docx , SIZE= 89554 , MTIME= 1385433445 
+
+REMOTE_ID= Unknown , IS_FILE= 0 , PATH= /home/xb/OneDrive/Public , SIZE= 0 , MTIME= 0 
+
+REMOTE_ID= Unknown , IS_FILE= 0 , PATH= /home/xb/OneDrive/Documents , SIZE= 0 , MTIME= 0 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/Documents/hello.s , SIZE= 548 , MTIME= 1385433428 
+
+REMOTE_ID= Unknown , IS_FILE= 0 , PATH= /home/xb/OneDrive/empty , SIZE= 0 , MTIME= 0 
+
+REMOTE_ID= Unknown , IS_FILE= 0 , PATH= /home/xb/OneDrive/empty/empty , SIZE= 0 , MTIME= 0 
+
+REMOTE_ID= Unknown , IS_FILE= 0 , PATH= /home/xb/OneDrive/cs240 , SIZE= 0 , MTIME= 0 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/cs240/hello.exe , SIZE= 90096 , MTIME= 1385433424 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/cs240/hello.s , SIZE= 548 , MTIME= 1385433426 
+
+REMOTE_ID= Unknown , IS_FILE= 0 , PATH= /home/xb/OneDrive/cs240/solution , SIZE= 0 , MTIME= 0 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/cs240/solution/backup.c , SIZE= 32 , MTIME= 1385433422 
+
+REMOTE_ID= Unknown , IS_FILE= 0 , PATH= /home/xb/OneDrive/Pictures , SIZE= 0 , MTIME= 0 
+
+REMOTE_ID= Unknown , IS_FILE= 0 , PATH= /home/xb/OneDrive/empty2 , SIZE= 0 , MTIME= 0 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/empty2/boss.jpg , SIZE= 55796 , MTIME= 1396559455 
+
+REMOTE_ID= Unknown , IS_FILE= 0 , PATH= /home/xb/OneDrive/empty2/seriously , SIZE= 0 , MTIME= 0 
+
+REMOTE_ID= Unknown , IS_FILE= 0 , PATH= /home/xb/OneDrive/empty2/seriously/kidding , SIZE= 0 , MTIME= 0 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/empty2/seriously/kidding/LICENSE , SIZE= 415 , MTIME= 1396373106 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/empty2/seriously/kidding/arribba.wav , SIZE= 41094 , MTIME= 1396373105 
+
+REMOTE_ID= Unknown , IS_FILE= 0 , PATH= /home/xb/OneDrive/empty2/seriously/kidding/really-empty , SIZE= 0 , MTIME= 0 
+
+REMOTE_ID= Unknown , IS_FILE= 0 , PATH= /home/xb/OneDrive/testaa , SIZE= 0 , MTIME= 0 
+
+REMOTE_ID= Unknown , IS_FILE= 1 , PATH= /home/xb/OneDrive/testaa/a_new_file , SIZE= 9 , MTIME= 1396563587 
+
