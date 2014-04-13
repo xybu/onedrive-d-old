@@ -1,0 +1,3 @@
+It is not quite portable because 
+xattr needs root permission and 
+tends not to be enabled on Ubuntu by default.
