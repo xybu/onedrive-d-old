@@ -10,7 +10,7 @@ if OS_USER == None or OS_USER == "":
 else:
 	# when in SUDO, fix the HOME_PATH
 	# may not be necessary on most OSes
-	HOME_PATH = os.path.split(HOME_PATH)[0] + "/" + OS_USER
+	HOME_PATH = os.path.split(HOME_PATH)[0] + "home/" + OS_USER
 
 OS_DIST =  platform.linux_distribution()
 
