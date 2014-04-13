@@ -7,7 +7,9 @@ case "$1" in
 		sudo apt-get -y install dpkg git python-pip python-yaml python-dateutil inotify-tools python-webkit
 		sudo pip install 'git+https://github.com/mk-fg/python-onedrive.git#egg=python-onedrive' --upgrade
 		sudo python setup.py install
+		rm -r build dist onedrive_d.egg-info
 		onedrive-util
+		echo "Setup is done. You can run onedrive-d command now."
 		;;
 	
 	uninstall)

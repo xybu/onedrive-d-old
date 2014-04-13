@@ -2,6 +2,7 @@
 
 import os
 import sys
+import pwd
 import config
 import gtk, webkit
 from onedrive import api_v5
@@ -26,11 +27,12 @@ def main():
 	global win
 	global liveView
 	
-	print config.HOME_PATH
 	if not os.path.exists(config.HOME_PATH + "/.lcrc"):
 		f = open(config.HOME_PATH + "/.lcrc", "w")
 		f.write("client:\n  id: " + config.APP_CREDS[0] + "\n  secret: " + config.APP_CREDS[1] + "\n")
 		f.close()
+		os.chown(config.HOME_PATH + "/.lcrc", pwd.getpwnam(OS_USER).pw_uid, pwd.getpwnam(OS_USER).pw_gid)
+		os.chmod(config.HOME_PATH + "/.lcrc", 0600)
 	
 	API = api_v5.PersistentOneDriveAPI.from_conf("~/.lcrc")
 	
