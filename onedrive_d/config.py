@@ -16,7 +16,7 @@ else:
 	# when in SUDO, fix the HOME_PATH
 	# may not be necessary on most OSes
 	# buggy!!
-	HOME_PATH = os.path.split(HOME_PATH)[0] + "/" + LOCAL_USER
+	HOME_PATH = os.path.split(HOME_PATH)[0] + "home/" + LOCAL_USER
 
 f = open(HOME_PATH + "/.onedrive/user.conf", "r")
 CONF = yaml.safe_load(f)
