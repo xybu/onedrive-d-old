@@ -2,15 +2,14 @@
 
 import os, sys, pwd, yaml, subprocess, platform
 
-HOME_PATH = os.path.expanduser("~")
+HOME_PATH = os.path.expanduser('~'+os.getenv("SUDO_USER"))
+
+
 OS_USER = os.getenv("SUDO_USER")
 if OS_USER == None or OS_USER == "":
 	# the user isn't running sudo
 	OS_USER = os.getenv("USER")
-else:
-	# when in SUDO, fix the HOME_PATH
-	# may not be necessary on most OSes
-	HOME_PATH = os.path.split(HOME_PATH)[0] + "/" + OS_USER
+
 
 OS_DIST =  platform.linux_distribution()
 
@@ -81,7 +80,7 @@ def setupDaemon():
 			exclusion_list = "exclude: \"\""
 			print "There is nothing in the exclusion list."
 	else:
-		exclusion_list = "exclude: \"\""
+		exclusion_list = "exclude: \"\"\n"
 		print "Skipped."
 	
 	while True:
