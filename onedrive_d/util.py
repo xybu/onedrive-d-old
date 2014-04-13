@@ -80,7 +80,7 @@ def setupDaemon():
 			exclusion_list = "exclude: \"\""
 			print "There is nothing in the exclusion list."
 	else:
-		exclusion_list = "exclude: \"\""
+		exclusion_list = "exclude: \"\"\n"
 		print "Skipped."
 	
 	while True:
