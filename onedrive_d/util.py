@@ -2,14 +2,13 @@
 
 import os, sys, pwd, yaml, subprocess, platform
 
-HOME_PATH = os.path.expanduser('~'+os.getenv("SUDO_USER"))
-
 
 OS_USER = os.getenv("SUDO_USER")
 if OS_USER == None or OS_USER == "":
 	# the user isn't running sudo
 	OS_USER = os.getenv("USER")
 
+HOME_PATH = os.path.expanduser('~' + OS_USER)
 
 OS_DIST =  platform.linux_distribution()
 
