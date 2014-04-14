@@ -94,7 +94,7 @@ class TaskWorker(threading.Thread):
 			# correspond to scanner's post_merge
 			_ent_list = resolve_CaseConflict(t.p1)
 			for entry in _ent_list:
-				if "exclude" in CONF != "" and re.match(CONF["exclude"], entry):
+				if CONF["exclude"] != "" and re.match(CONF["exclude"], entry):
 					print(t.p1 + "/" + entry + " is excluded by worker.")
 				elif os.path.isfile(t.p1 + "/" + entry):
 					TASK_QUEUE.put(Task("put", t.p1 + "/" + entry, t.p2 + "/" + entry))
@@ -171,7 +171,7 @@ class DirScanner(threading.Thread):
 			for entry in self._raw_log:
 				if entry["name"] == None:
 					continue
-				if "exclude" in CONF and re.match(CONF["exclude"], entry["name"]):
+				if CONF["exclude"] != "" and re.match(CONF["exclude"], entry["name"]):
 					print("Remote file " + self._remotePath + "/" + entry["name"] + " is excluded.")
 					continue
 				self.checkout(entry)
@@ -260,7 +260,7 @@ class LocalMonitor(threading.Thread):
 			TASK_QUEUE.put(Task("put", dir + object, dir.replace(self.rootPath, "")))
 	
 	def run(self):
-		if "exclude" in CONF:
+		if CONF["exclude"] != "":
 			exclude_args = ["--exclude", CONF["exclude"]]
 		else:
 			exclude_args = []
