@@ -7,16 +7,11 @@ import yaml
 
 APP_CREDS = ("000000004010C916", "PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi")
 
-HOME_PATH = os.path.expanduser("~")
 LOCAL_USER = os.getenv("SUDO_USER")
 if LOCAL_USER == None or LOCAL_USER == "":
-	# the user isn't running sudo
 	LOCAL_USER = os.getenv("USER")
-else:
-	# when in SUDO, fix the HOME_PATH
-	# may not be necessary on most OSes
-	# buggy!!
-	HOME_PATH = os.path.split(HOME_PATH)[0] + "/" + LOCAL_USER
+
+HOME_PATH = os.path.expanduser("~" + LOCAL_USER)
 
 f = open(HOME_PATH + "/.onedrive/user.conf", "r")
 CONF = yaml.safe_load(f)
