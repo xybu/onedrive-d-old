@@ -4,12 +4,12 @@ This project intends to develop a client program for Microsoft OneDrive
 (formerly SkyDrive) on Ubuntu-based Linux. The API is based on Mike Kazantsev's 
 project [*python-onedrive*](https://github.com/mk-fg/python-onedrive).
 
-	 * While you can use `onedrive-cli` command offered by *python-onedrive* 
-	 project, the daemon tries to do the work automatically, and GUIs are being 
-	 developed.
+ * While you can use `onedrive-cli` command offered by *python-onedrive* 
+ project, the daemon tries to do the work automatically, and GUIs are being 
+ developed.
 	 
-	 * The reference environment is Ubuntu, but by installing the corresponding 
-	 packages required by the project, it should work on other Linux distros.
+ * The reference environment is Ubuntu, but by installing the corresponding 
+ packages required by the project, it should work on other Linux distros.
 
 ## Branches
  * **master**: the main branch
@@ -57,6 +57,11 @@ For Users
  Since the package is still under development, it will not run at system 
  startup.
 
+## Notes about Usage
+
+There are some notes regarding the usage.
+
+* OneDrive uses NTFS file naming rules. i.e., case insensitive, and the following characters are reserved in file names: `<`, `>`, `:`, `"`, `\`,`/`, `|`, `?`, and `*`. As a result, files containing those special characters will be ignored by the program. As for case insensitivity, the program will rename files that conflict in cases.
 
 More Links
 ----------
