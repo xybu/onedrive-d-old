@@ -2,13 +2,13 @@
 
 import os, sys, pwd, yaml, subprocess, platform
 
-
+ROOT_PRIV = True
 OS_USER = os.getenv("SUDO_USER")
 if OS_USER == None or OS_USER == "":
-	# the user isn't running sudo
 	OS_USER = os.getenv("USER")
+	ROOT_PRIV = False
 
-HOME_PATH = os.path.expanduser('~' + OS_USER)
+HOME_PATH = os.path.expanduser("~" + OS_USER)
 
 OS_DIST =  platform.linux_distribution()
 
@@ -71,12 +71,12 @@ def setupDaemon():
 		if queryUser("\t4. Exclude emacs temporary files?", "y"):
 			exclusion_list = exclusion_list + "\#.*\#|\.emacs\.desktop|\.emacs\.desktop\.lock|.*\.elc|/auto-save-list|\.\#.*|\.org-id-locations|.*_flymake\..*".split("|")
 		if queryUser("\t5. Exclude possibly Mac OS X temporary files?", "y"):
-			exclusion_list = exclusion_list + "\.DS_Store|Icon\r|\.AppleDouble|\.LSOverride|\._.*|\.Spotlight-V100|\.Trashes".split("|")
+			exclusion_list = exclusion_list + "\.DS_Store|Icon.|\.AppleDouble|\.LSOverride|\._.*|\.Spotlight-V100|\.Trashes".split("|")
 		
 		if exclusion_list != []:
 			exclusion_list = "exclude: ^(" + "|".join(exclusion_list) + ")$\n"
 		else:
-			exclusion_list = "exclude: \"\""
+			exclusion_list = "exclude: \"\"\n"
 			print "There is nothing in the exclusion list."
 	else:
 		exclusion_list = "exclude: \"\"\n"
@@ -175,8 +175,11 @@ exit 0
 
 def main():
 	checkOSVersion()
-	setupDaemon()
-	print "All done."
+	if ROOT_PRIV:
+		setupDaemon()
+		print "All done."
+	else:
+		print " onedrive-util needs to run under root permission.\n"
 
 if __name__ == "__main__":
 	main()
