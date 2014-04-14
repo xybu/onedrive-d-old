@@ -76,10 +76,10 @@ def setupDaemon():
 		if exclusion_list != []:
 			exclusion_list = "exclude: ^(" + "|".join(exclusion_list) + ")$\n"
 		else:
-			exclusion_list = "exclude: \"\""
+			exclusion_list = "exclude: \"\"\n"
 			print "There is nothing in the exclusion list."
 	else:
-		exclusion_list = "exclude: \"\""
+		exclusion_list = "exclude: \"\"\n"
 		print "Skipped."
 	
 	while True:
