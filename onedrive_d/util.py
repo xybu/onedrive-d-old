@@ -71,7 +71,7 @@ def setupDaemon():
 		if queryUser("\t4. Exclude emacs temporary files?", "y"):
 			exclusion_list = exclusion_list + "\#.*\#|\.emacs\.desktop|\.emacs\.desktop\.lock|.*\.elc|/auto-save-list|\.\#.*|\.org-id-locations|.*_flymake\..*".split("|")
 		if queryUser("\t5. Exclude possibly Mac OS X temporary files?", "y"):
-			exclusion_list = exclusion_list + "\.DS_Store|Icon\r|\.AppleDouble|\.LSOverride|\._.*|\.Spotlight-V100|\.Trashes".split("|")
+			exclusion_list = exclusion_list + "\.DS_Store|Icon.|\.AppleDouble|\.LSOverride|\._.*|\.Spotlight-V100|\.Trashes".split("|")
 		
 		if exclusion_list != []:
 			exclusion_list = "exclude: ^(" + "|".join(exclusion_list) + ")$\n"
