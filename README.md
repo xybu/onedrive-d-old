@@ -1,60 +1,68 @@
 onedrive-d
 ==================
-This project intends to develop an OneDrive (formerly SkyDrive) daemon on (X)ubuntu based on the API of Mike Kazantsev's project `python-onedrive` (https://github.com/mk-fg/python-onedrive).
+This project intends to develop a client program for Microsoft OneDrive 
+(formerly SkyDrive) on Ubuntu-based Linux. The API is based on Mike Kazantsev's 
+project [*python-onedrive*](https://github.com/mk-fg/python-onedrive).
 
-While you can use `onedrive-cli` command offered by `python-onedrive` project, the daemon tries to do the work automatically, and GUIs are being developed.
+	 * While you can use `onedrive-cli` command offered by *python-onedrive* 
+	 project, the daemon tries to do the work automatically, and GUIs are being 
+	 developed.
+	 
+	 * The reference environment is Ubuntu, but by installing the corresponding 
+	 packages required by the project, it should work on other Linux distros.
 
-Branches
---------
+## Branches
  * **master**: the main branch
- * **wip**: stores the newest work
+ * **wip**: the newest work
 
-Description
------------
+For Developers
+--------------
 
-Besides the `python-onedrive` base, there are a few major components in the project:
+## Components
 
- * **DirScanner** scans the differences between the local and remote `dir`s, and merges them if needed
+The major components in this program are:
+
+ * **DirScanner** scans the differences between the local and remote `dir`s, and
+  merges them if needed
  	 * It does not delete files.
- 	 * May undo file deletion or mess up the repo. But by far we prefer the safest approach.
+ 	 * May undo file deletion or mess up the repo. But by far we prefer the 
+ 	 safest approach.
  * **TaskWorker**
  	 * It executes the tasks issued by DirScanner objects
  	 * and waits to handle new tasks
  	 	 * **Tasks** are wrapped as objects
  * **LocalMonitor**
- 	 * It forks a `inotifywait` process to monitor the OneDrive local repository.
- 	 * and issue tasks for TaskWorkers to perform if there are any changes detected.
+ 	 * It forks a `inotifywait` process to monitor the OneDrive local 
+ 	 repository.
+ 	 * and issue tasks for TaskWorkers to perform if there are any changes 
+ 	 detected.
  * **RemoteMonitor**
- 	 * Periodically gets the most recently changed files from OneDrive server _(planned)_
- 	 * more at http://isdk.dev.live.com/dev/isdk/ISDK.aspx?category=scenarioGroup_skyDrive&index=6
+ 	 * Pull the recent updates from server and merge the new ones 
+ 	 * Periodically update the quota information
  * **Linux Service**
  	 * The service will be installed to `/etc/init.d/onedrive-d`
 
-Notice
---------
+For Users
+---------
 
-* (April 10, 2014) 
-	 * Combined the UI experiments to the daemon
-	 * Changed API and internal naming to reflect the renaming of `python-onedrive` project
-
-Installation
---------------
+## Installation
 
  - Download the source from GitHub repo
  - In the source directory, run `sudo ./inst install` and go with the prompts
- - If the daemon fails to register, you may run `onedrive-d` command to have the daemon start
+ - If the daemon fails to register, you may run `onedrive-d` command to have the
+  daemon start
  
  Notes:
  
- Since the package is still under development, it will not run at system startup.
-
-Homepage
------------
-Please visit: http://www.xybu.me/projects/skydrive-d/
+ Since the package is still under development, it will not run at system 
+ startup.
 
 
-Contact
---------
-Xiangyu Bu
-	 * website: http://xybu.me
-	 * email: xybu92(at)live.com
+More Links
+----------
+
+## Links
+ * Project introduction page: http://xybu.me/projects/onedrive-d
+
+## Contact
+ * [Xiangyu Bu](http://xybu.me)
