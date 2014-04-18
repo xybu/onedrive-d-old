@@ -59,7 +59,8 @@ def setupDaemon():
 	
 	assert mkdirIfMissing(HOME_PATH + "/.onedrive"), "Failed to create the configuration path."
 	
-	exclusion_list = []
+	# exclude the files that are not supported by NTFS
+	exclusion_list = [".*[<>?\*:\"\'\|]+.*"]
 	
 	if queryUser("Do you want to exclude some files from being synchronized? ", "y"):
 		if queryUser("\t1. Exclude Windows temporary files like \"Desktop.ini?\"", "y"):
