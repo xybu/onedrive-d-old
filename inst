@@ -1,38 +1,75 @@
 #!/bin/bash
 
+# Installation script for onedrive-d
+
+echo "Start setting up onedrive-d package."
+
+echo "Finding out the installed package manager..."
+if test_command apt-get
+then
+	pmCmd="apt-get"
+	packageList="git python-webkit"
+elif test_command yum
+then
+	pmCmd="yum"
+	packageList="git-core pywebkitgtk"
+else
+	echo "The script supports only apt-get and yum package managers."
+	echo "Setup exit."
+	exit 2
+fi
+echo "Detected package manager: $pmCmd"
+
+# Packages common to both package managers
+packageList="$packageList python-pip inotify-tools"
+
 case "$1" in
 
 	install)
-		# sudo apt-get update && apt-get upgrade
-		sudo apt-get -y install dpkg git python-pip python-yaml python-dateutil inotify-tools python-webkit
-		sudo pip install 'git+https://github.com/mk-fg/python-onedrive.git#egg=python-onedrive' --upgrade
-		sudo python setup.py install
-		rm -r build dist onedrive_d.egg-info
-		onedrive-util
-		echo "Setup is done. You can run onedrive-d command now."
+		do_install
 		;;
 	
 	uninstall)
-		do_stop
-		do_start
+		do_uninstall
 		;;
 	
-	remove_old)
-		sudo pip uninstall onedrive-d
+	reinstall)
+		do_uninstall
+		do_install
 		;;
 	
-	sweep)
+	kill)
 		killall -9 onedrive-d
 		killall -9 inotifywait
 		killall -9 python
 		;;
 	
 	*)
-		echo "Usage: ./inst {install|uninstall|remove_old}"
+		echo "Usage: ./inst (install|uninstall|reinstall|kill)"
 		exit 1
 		;;
 	
 esac
 
 exit 0
+
+# Determine if a command exists
+test_command() {
+	[ -x "$(which $1)" ]
+}
+
+# Installation
+do_install () {
+	sudo $pmCmd install $packageList
+	sudo pip install 'git+https://github.com/mk-fg/python-onedrive.git#egg=python-onedrive' --upgrade
+	sudo python setup.py install
+	sudo rm -r build dist onedrive_d.egg-info
+	onedrive-util
+	echo "Setup is done. You can run onedrive-d command now."
+}
+
+# Uninstallation
+do_uninstall () {
+	sudo pip uninstall onedrive-d
+}
 
