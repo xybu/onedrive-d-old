@@ -10,7 +10,7 @@ except IOError:
 
 setup(
 	name='onedrive-d',
-	version='0.7.1',
+	version='0.8',
 	author='Xiangyu Bu',
 	author_email='xybu92@live.com',
 	license='MIT',
@@ -40,7 +40,7 @@ setup(
 		'Topic :: System :: Filesystems',
 		'Topic :: Utilities'],
 	
-	install_requires = ['PyYAML', 'requests', 'urllib3', 'python-onedrive'],
+	install_requires = ['requests', 'urllib3', 'PyYAML', 'python-onedrive'],
 	
 	packages=find_packages(),
 	include_package_data=True,
@@ -50,7 +50,6 @@ setup(
 
 	entry_points = dict(console_scripts=[
 		'onedrive-d = onedrive_d.daemon:main', 
-		'onedrive-auth = onedrive_d.auth:main', 
-		'onedrive-util = onedrive_d.util:main'])
+		'onedrive-prefs = onedrive_d.prefs:main'])
 )
 

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import os, sys, pwd, yaml, subprocess, platform
+import os, sys, pwd, json, subprocess
 
 ROOT_PRIV = True
 OS_USER = os.getenv("SUDO_USER")
@@ -9,8 +9,6 @@ if OS_USER == None or OS_USER == "":
 	ROOT_PRIV = False
 
 HOME_PATH = os.path.expanduser("~" + OS_USER)
-
-OS_DIST =  platform.linux_distribution()
 
 def queryUser(question, answer = "y"):
 	valid = {"y": True, "ye": True, "yes": True,
@@ -46,55 +44,43 @@ def mkdirIfMissing(path):
 		print "OSError({0}): {1}".format(e.errno, e.strerror)
 		return False
 
-def checkOSVersion():
-	if OS_DIST[0] != "Ubuntu":
-		if not queryUser("The package may not support non-Ubuntu based Linux.\nDo you still want to proceed?", "n"):
-			print "Stopped."
-			sys.exit(0)
-
-def setupDaemon():
-	rootPath = ""
+def setup_daemon():
+	configurations = {
+		"rootPath": "",
+		"exclude": ""
+	}
 	
 	print "Setting up OneDrive-d..."
 	
-	assert mkdirIfMissing(HOME_PATH + "/.onedrive"), "Failed to create the configuration path."
+	assert mkdirIfMissing(HOME_PATH + "/.onedrive"), "Failed to create the configuration directory."
 	
 	# exclude the files that are not supported by NTFS
 	exclusion_list = [".*[<>?\*:\"\'\|]+.*"]
 	
-	if queryUser("Do you want to exclude some files from being synchronized? ", "y"):
-		if queryUser("\t1. Exclude Windows temporary files like \"Desktop.ini?\"", "y"):
-			exclusion_list = exclusion_list + "~\$.*\.*|.*\.laccdb|Desktop\.ini|Thumbs\.db|EhThumbs\.db".split("|")
-		if queryUser("\t2. Exclude typical Linux temporary files?", "y"):
-			exclusion_list = exclusion_list + ".*~|\.lock".split("|")
-		if queryUser("\t3. Exclude ViM temporary files?", "y"):
-			exclusion_list = exclusion_list + ".netrwhist|\.directory|Session\.vim|[._]*.s[a-w][a-z]|[._]s[a-w][a-z]|.*\.un~".split("|")
-		if queryUser("\t4. Exclude emacs temporary files?", "y"):
-			exclusion_list = exclusion_list + "\#.*\#|\.emacs\.desktop|\.emacs\.desktop\.lock|.*\.elc|/auto-save-list|\.\#.*|\.org-id-locations|.*_flymake\..*".split("|")
-		if queryUser("\t5. Exclude possibly Mac OS X temporary files?", "y"):
-			exclusion_list = exclusion_list + "\.DS_Store|Icon.|\.AppleDouble|\.LSOverride|\._.*|\.Spotlight-V100|\.Trashes".split("|")
+	if queryUser("1. Exclude Windows temporary files like \"Desktop.ini?\"", "y"):
+		exclusion_list = exclusion_list + "~\$.*\.*|.*\.laccdb|Desktop\.ini|Thumbs\.db|EhThumbs\.db".split("|")
+	if queryUser("2. Exclude typical Linux temporary files?", "y"):
+		exclusion_list = exclusion_list + ".*~|\.lock".split("|")
+	if queryUser("3. Exclude ViM temporary files?", "y"):
+		exclusion_list = exclusion_list + ".netrwhist|\.directory|Session\.vim|[._]*.s[a-w][a-z]|[._]s[a-w][a-z]|.*\.un~".split("|")
+	if queryUser("4. Exclude emacs temporary files?", "y"):
+		exclusion_list = exclusion_list + "\#.*\#|\.emacs\.desktop|\.emacs\.desktop\.lock|.*\.elc|/auto-save-list|\.\#.*|\.org-id-locations|.*_flymake\..*".split("|")
+	if queryUser("5. Exclude possibly Mac OS X temporary files?", "y"):
+		exclusion_list = exclusion_list + "\.DS_Store|Icon.|\.AppleDouble|\.LSOverride|\._.*|\.Spotlight-V100|\.Trashes".split("|")
 		
-		if exclusion_list != []:
-			exclusion_list = "exclude: ^(" + "|".join(exclusion_list) + ")$\n"
-		else:
-			exclusion_list = "exclude: \"\"\n"
-			print "There is nothing in the exclusion list."
-	else:
-		exclusion_list = "exclude: \"\"\n"
-		print "Skipped."
+	configurations["exclude"] = "^(" + "|".join(exclusion_list) + ")$"
 	
 	while True:
-		sys.stdout.write("Please specify the local directory of OneDrive (default:" + HOME_PATH + "/OneDrive):\n")
+		sys.stdout.write("6. Please specify the local directory of OneDrive (default:" + HOME_PATH + "/OneDrive):\n")
 		response = raw_input().strip()
 		if response == None or response == "\n" or response == "":
 			response = HOME_PATH + "/OneDrive"
 		if mkdirIfMissing(response):
 			CONF_PATH = HOME_PATH + "/.onedrive/user.conf"
+			configurations["rootPath"] = os.path.abspath(response)
+			
 			f = open(CONF_PATH, "w")
-			rootPath = os.path.abspath(response)
-			f.write("rootPath: " + rootPath + "\n")
-			f.write(exclusion_list)
-			f.write("confVer: 0.7\n")
+			f.write(json.dumps(configurations))
 			f.close()
 			os.chown(CONF_PATH, pwd.getpwnam(OS_USER).pw_uid, pwd.getpwnam(OS_USER).pw_gid)
 			os.chmod(CONF_PATH, 0600)
@@ -175,12 +161,11 @@ exit 0
 	print "Finished setting up the program."
 
 def main():
-	checkOSVersion()
 	if ROOT_PRIV:
-		setupDaemon()
+		setup_daemon()
 		print "All done."
 	else:
-		print " onedrive-util needs to run under root permission.\n"
+		print " onedrive-util needs to run with root permission.\n"
 
 if __name__ == "__main__":
 	main()

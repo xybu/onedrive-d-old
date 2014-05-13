@@ -48,14 +48,19 @@ For Users
 ## Installation
 
  - Download the source from GitHub repo
- - In the source directory, run `sudo ./inst install` and go with the prompts
- - If the daemon fails to register, you may run `onedrive-d` command to have the
-  daemon start
+ - In the source directory, run `./inst install` and go with the prompts
+ - If you are upgrading from a previous version, run `./inst reinstall` instead
+ - If the daemon fails to register, you may run `onedrive-d` command to start the
  
  Notes:
  
  Since the package is still under development, it will not run at system 
  startup.
+
+## Usage
+
+ * To start the daemon manually, issue command `onedrive-d`
+ * To configure the program, issue command `onedrive-prefs`
 
 ## Notes about Usage
 

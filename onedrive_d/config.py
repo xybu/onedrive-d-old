@@ -1,9 +1,8 @@
 #!/usr/bin/python
 
 import os
-import threading
-import Queue
-import yaml
+import threading, Queue
+import json
 
 APP_CREDS = ("000000004010C916", "PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi")
 
@@ -13,9 +12,13 @@ if LOCAL_USER == None or LOCAL_USER == "":
 
 HOME_PATH = os.path.expanduser("~" + LOCAL_USER)
 
-f = open(HOME_PATH + "/.onedrive/user.conf", "r")
-CONF = yaml.safe_load(f)
-f.close()
+try:
+	f = open(HOME_PATH + "/.onedrive/user.conf", "r")
+	CONF = json.load(f)
+	f.close()
+except:
+	CONF = None
+	pass
 
 QUOTA = {"free": 0, "total": 0}
 

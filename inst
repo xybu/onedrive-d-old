@@ -1,10 +1,34 @@
 #!/bin/bash
-
 # Installation script for onedrive-d
+
+APP_CLIENT_ID="000000004010C916"
+APP_CLIENT_SECRET="PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi"
+
+# Determine if a command exists
+test_command() {
+	[ -x "$(which $1)" ]
+}
+
+# Installation
+do_install () {
+	rm -rf ~/.onedrive
+	sudo $pmCmd install $packageList
+	sudo pip install 'git+https://github.com/mk-fg/python-onedrive.git#egg=python-onedrive' --upgrade
+	sudo python setup.py install
+	sudo rm -r build dist onedrive_d.egg-info
+	sudo cp "./onedrive-d" "/etc/init.d/onedrive-d"
+	sudo chmod u+x "/etc/init.d/onedrive-d"
+	onedrive-prefs & 
+	echo "Setup is done. You can run onedrive-d command after finishing the settings."
+}
+
+# Uninstallation
+do_uninstall () {
+	sudo pip uninstall onedrive-d
+}
 
 echo "Start setting up onedrive-d package."
 
-echo "Finding out the installed package manager..."
 if test_command apt-get
 then
 	pmCmd="apt-get"
@@ -21,7 +45,7 @@ fi
 echo "Detected package manager: $pmCmd"
 
 # Packages common to both package managers
-packageList="$packageList python-pip inotify-tools"
+packageList="$packageList python-pip python-dateutil inotify-tools"
 
 case "$1" in
 
@@ -52,24 +76,4 @@ case "$1" in
 esac
 
 exit 0
-
-# Determine if a command exists
-test_command() {
-	[ -x "$(which $1)" ]
-}
-
-# Installation
-do_install () {
-	sudo $pmCmd install $packageList
-	sudo pip install 'git+https://github.com/mk-fg/python-onedrive.git#egg=python-onedrive' --upgrade
-	sudo python setup.py install
-	sudo rm -r build dist onedrive_d.egg-info
-	onedrive-util
-	echo "Setup is done. You can run onedrive-d command now."
-}
-
-# Uninstallation
-do_uninstall () {
-	sudo pip uninstall onedrive-d
-}
 
