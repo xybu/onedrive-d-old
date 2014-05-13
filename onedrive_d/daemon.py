@@ -84,7 +84,7 @@ class OneDrive_StatusIcon(gtk.StatusIcon):
 	
 	#@profile
 	def e_show_root(self, widget, event=None):
-		subprocess.check_call(['gnome-open', config.CONF["rootPath"], ''])
+		subprocess.call(['xdg-open', config.CONF["rootPath"]])
 	
 	#@profile
 	def e_show_settings(self, widget, event=None):

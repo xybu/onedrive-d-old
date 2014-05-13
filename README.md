@@ -1,19 +1,48 @@
 onedrive-d
 ==================
-This project intends to develop a client program for Microsoft OneDrive 
-(formerly SkyDrive) on Ubuntu-based Linux. The API is based on Mike Kazantsev's 
+This project aims to deliver a Microsoft OneDrive (formerly SkyDrive) client that runs on major Linux distros. The API is based on Mike Kazantsev's 
 project [*python-onedrive*](https://github.com/mk-fg/python-onedrive).
 
- * While you can use `onedrive-cli` command offered by *python-onedrive* 
- project, the daemon tries to do the work automatically, and GUIs are being 
- developed.
-	 
- * The reference environment is Ubuntu, but by installing the corresponding 
- packages required by the project, it should work on other Linux distros.
+Currently the reference environment is Ubuntu x64, while support for RHEL/CentOS/Fedora is on the way.
 
 ## Branches
  * **master**: the main branch
  * **wip**: the newest work
+
+For Users
+---------
+
+## Installation
+
+ - Download or `git clone` the source from GitHub repo
+ - In the source directory, run `./inst install` and go with the prompts
+ - If you are upgrading from a previous version, run `./inst reinstall` instead
+ - If the daemon fails to register, you may run `onedrive-d` command to start the
+ 
+ Notes:
+ 
+ Since the package is still under development, it will not run at system 
+ startup.
+
+## Usage
+
+ * To start the daemon manually, issue command `onedrive-d`
+ * To configure the program, issue command `onedrive-prefs`
+ * To use the command-line tools, issue command `onedrive-cli` for more details
+
+## Notes for RHEL / CentOS / Fedora Users
+
+I've decided to support RHEL / CentOS / Fedora distros, and there are many tests to be done. Please do give me feedback. I really appreciate your help.
+
+### How can I find the "Tray Icon" of OneDrive-D on Fedora?
+
+On Fedora Gnome 20, press Super + M (default keyboard shortcut) to call out the _messaging tray_ and you will find the familiar OneDrive cloud icon in it.
+
+## Notes about Usage
+
+There are some notes regarding the usage.
+
+* OneDrive uses NTFS file naming rules. i.e., case insensitive, and the following characters are reserved in file names: `<`, `>`, `:`, `"`, `\`,`/`, `|`, `?`, and `*`. As a result, files containing those special characters will be ignored by the program. As for case insensitivity, the program will rename files that conflict in cases.
 
 For Developers
 --------------
@@ -42,31 +71,7 @@ The major components in this program are:
  * **Linux Service**
  	 * The service will be installed to `/etc/init.d/onedrive-d`
 
-For Users
----------
 
-## Installation
-
- - Download the source from GitHub repo
- - In the source directory, run `./inst install` and go with the prompts
- - If you are upgrading from a previous version, run `./inst reinstall` instead
- - If the daemon fails to register, you may run `onedrive-d` command to start the
- 
- Notes:
- 
- Since the package is still under development, it will not run at system 
- startup.
-
-## Usage
-
- * To start the daemon manually, issue command `onedrive-d`
- * To configure the program, issue command `onedrive-prefs`
-
-## Notes about Usage
-
-There are some notes regarding the usage.
-
-* OneDrive uses NTFS file naming rules. i.e., case insensitive, and the following characters are reserved in file names: `<`, `>`, `:`, `"`, `\`,`/`, `|`, `?`, and `*`. As a result, files containing those special characters will be ignored by the program. As for case insensitivity, the program will rename files that conflict in cases.
 
 More Links
 ----------
