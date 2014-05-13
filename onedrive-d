@@ -1,4 +1,3 @@
-"""
 #!/bin/sh
 
 ### BEGIN INIT INFO
@@ -25,7 +24,7 @@ PIDFILE=/var/run/$DAEMON_NAME.pid
 
 do_start () {
 	log_daemon_msg "Starting daemon $DAEMON_NAME"
-	start-stop-daemon --start --background --pidfile $PIDFILE --make-pidfile --user $DAEMON_USER --startas $DAEMON_PATH
+	start-stop-daemon --start --background --pidfile $PIDFILE --make-pidfile --user $DAEMON_USER --chuid $DAEMON_USER --startas $DAEMON_PATH
 	log_end_msg $?
 }
 
@@ -57,5 +56,3 @@ case "$1" in
 esac
 
 exit 0
-
-"""

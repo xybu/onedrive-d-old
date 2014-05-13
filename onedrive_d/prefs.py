@@ -233,7 +233,14 @@ excluded automatically.""")
 		f.close()
 		os.chown(CONF_PATH, pwd.getpwnam(config.LOCAL_USER).pw_uid, pwd.getpwnam(config.LOCAL_USER).pw_gid)
 		os.chmod(CONF_PATH, 0600)
-	
+		
+		info = gtk.MessageDialog(parent = self, type = gtk.MESSAGE_INFO, buttons = gtk.BUTTONS_OK, message_format = "Your preferences have been saved successfully.")
+		response = info.run()
+		if response == gtk.RESPONSE_OK:
+			info.destroy()
+			del info
+			del response
+		
 	def exit_window(self, widget, args = None):
 		try:
 			CONF_PATH = config.HOME_PATH + "/.onedrive/user.conf"
