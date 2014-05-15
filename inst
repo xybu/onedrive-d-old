@@ -45,7 +45,7 @@ fi
 echo "Detected package manager: $pmCmd"
 
 # Packages common to both package managers
-packageList="$packageList python-pip python-dateutil inotify-tools"
+packageList="$packageList python-pip python-dateutil inotify-tools rcs"
 
 case "$1" in
 
