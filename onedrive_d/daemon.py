@@ -1,16 +1,12 @@
 #!/usr/bin/python
 
-import sys
-import os
-import gc
-import gtk
-import gobject
-import pynotify
+import sys, os, gc
+import gtk, gobject, pynotify
 import threading
 import subprocess
 import config
 import components
-import onedrive
+from onedrive import api_v5
 
 gtk.gdk.threads_init()
 gobject.threads_init()
@@ -159,34 +155,36 @@ def main():
 	global API	
 	
 	gc.enable()
+	
+	if config.CONF == None:
+		subprocess.call(["onedrive-prefs"])
+		config.load_conf()
+	
 	try:
-		API = onedrive.api_v5.PersistentOneDriveAPI.from_conf("~/.lcrc")
+		if config.CONF == None:
+			raise ValueError()
+		API = api_v5.PersistentOneDriveAPI.from_conf("~/.lcrc")
 		quota = API.get_quota()
 		config.QUOTA["free"] = quota[0]
 		config.QUOTA["total"] = quota[1]
 		config.AUTHENTICATED = True
-	except (IOError, onedrive.api_v5.AuthenticationError) as e:
-		subp = subprocess.Popen(["onedrive-auth"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		ret = subp.communicate()
-		print ret[0]
-		print ret[1]
-		if ret[0] != None and "succeeded" in ret[0]:
-			try:
-				API = onedrive.api_v5.PersistentOneDriveAPI.from_conf("~/.lcrc")
-				quota = API.get_quota()
-				config.QUOTA["free"] = quota[0]
-				config.QUOTA["total"] = quota[1]
-				config.AUTHENTICATED = True
-			except:
-				print "OneDrive-d cannot get information from the server. Exit."
-				sys.exit(1)
-		else:
-			print "The authentication process failed. Exit."
+	except (ValueError, IOError, api_v5.AuthenticationError) as e:
+		ret = subprocess.call(["onedrive-prefs"])
+		config.load_conf()
+		try:
+			API = api_v5.PersistentOneDriveAPI.from_conf("~/.lcrc")
+			quota = API.get_quota()
+			config.QUOTA["free"] = quota[0]
+			config.QUOTA["total"] = quota[1]
+			config.AUTHENTICATED = True
+		except:
+			print "OneDrive-d cannot get information from the server. Exit."
 			sys.exit(1)
-		gc.collect()
 	
-	if not config.AUTHENTICATED:
-		print "OneDrive-d was not authenticated. Exit."
+	gc.collect()
+	
+	if not config.AUTHENTICATED or config.CONF == None:
+		print "OneDrive-d was not authenticated or properly configured. Exit."
 		sys.exit(1)
 	
 	OneDrive_StatusIcon(API).run()

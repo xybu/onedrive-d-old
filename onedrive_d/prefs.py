@@ -100,7 +100,7 @@ class OneDrive_SettingsWindow(gtk.Window):
 		contentTable = gtk.Table(rows = 4, columns = 2, homogeneous = False)
 		
 		authLabel = gtk.Label(str = "Authentication")	
-		authTable = gtk.Table(rows = 1, columns = 2)
+		authTable = gtk.Table(rows = 2, columns = 1)
 		authButton = gtk.Button(label = "Connect to OneDrive.com")
 		authButton.connect("clicked", self.open_auth_window)
 		self.authTextLabel = gtk.Label("Check authentication status...")
@@ -108,8 +108,12 @@ class OneDrive_SettingsWindow(gtk.Window):
 		authTable.attach(authButton, 0, 1, 1, 2, ypadding = 1)
 		
 		locationLabel = gtk.Label(str = "Location")
+		locationTable = gtk.Table(rows = 2, columns = 1)
+		location_helpText = gtk.Label("The local folder to sync with your OneDrive.")
 		self.locationChooser = gtk.FileChooserButton(self.create_filechooser_dialog())
 		self.locationChooser.connect("file-set", self.location_chosen)
+		locationTable.attach(location_helpText, 0, 1, 0, 1, xpadding = 1)
+		locationTable.attach(self.locationChooser, 0, 1, 1, 2, xpadding = 1)
 		
 		exclusionLabel = gtk.Label(str = "Exclusions")
 		exclusionTable = gtk.Table(rows = 7, columns = 1)
@@ -126,12 +130,21 @@ excluded automatically.""")
 		
 		# Load saved settings
 		if config.CONF != None:
-			self.exclude_WinFiles.set_active(config.CONF["exclude_WinFiles"])
-			self.exclude_MacFiles.set_active(config.CONF["exclude_MacFiles"])
-			self.exclude_LinuxTempFiles.set_active(config.CONF["exclude_LinuxTempFiles"])
-			self.exclude_VimTempFiles.set_active(config.CONF["exclude_VimTempFiles"])
-			self.exclude_EmacsTempFiles.set_active(config.CONF["exclude_EmacsTempFiles"])
-			self.locationChooser.set_filename(config.CONF["rootPath"])
+			try:
+				self.exclude_WinFiles.set_active(config.CONF["exclude_WinFiles"])
+				self.exclude_MacFiles.set_active(config.CONF["exclude_MacFiles"])
+				self.exclude_LinuxTempFiles.set_active(config.CONF["exclude_LinuxTempFiles"])
+				self.exclude_VimTempFiles.set_active(config.CONF["exclude_VimTempFiles"])
+				self.exclude_EmacsTempFiles.set_active(config.CONF["exclude_EmacsTempFiles"])
+				self.locationChooser.set_filename(config.CONF["rootPath"])
+			except:
+				pass
+		else:
+			self.exclude_WinFiles.set_active(True)
+			self.exclude_MacFiles.set_active(True)
+			self.exclude_LinuxTempFiles.set_active(True)
+			self.exclude_VimTempFiles.set_active(True)
+			self.exclude_EmacsTempFiles.set_active(True)
 		
 		exclusionTable.attach(exclude_helpText, 0, 1, 0, 1, ypadding = 3)
 		exclusionTable.attach(self.exclude_WinFiles, 0, 1, 1, 2, ypadding = 1)
@@ -144,7 +157,7 @@ excluded automatically.""")
 		contentTable.attach(authLabel, 0, 1, 0, 1, xpadding = 5, ypadding = 10)
 		contentTable.attach(authTable, 1, 2, 0, 1, xpadding = 5, ypadding = 10)
 		contentTable.attach(locationLabel, 0, 1, 1, 2, xpadding = 5, ypadding = 10)
-		contentTable.attach(self.locationChooser, 1, 2, 1, 2, xpadding = 5, ypadding = 10)
+		contentTable.attach(locationTable, 1, 2, 1, 2, xpadding = 5, ypadding = 10)
 		contentTable.attach(exclusionLabel, 0, 1, 2, 3, xpadding = 5, ypadding = 10)
 		contentTable.attach(exclusionTable, 1, 2, 2, 3, xpadding = 5, ypadding = 10)
 		
