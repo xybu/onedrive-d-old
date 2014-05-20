@@ -290,11 +290,12 @@ class RemoteMonitor(threading.Thread):
 	
 	def __init__(self):
 		threading.Thread.__init__(self)
-		self.daemon = True
-		self.rootPath = CONF["rootPath"]
+		# self.daemon = True
+		if CONF != None:
+			self.rootPath = CONF["rootPath"]
 	
 	def run(self):
-		pass
+		print API('me/skydrive/recent_docs')['data']
 
 class Waiter(threading.Thread):
 	
