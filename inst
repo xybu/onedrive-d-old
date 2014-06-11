@@ -36,7 +36,7 @@ then
 elif test_command yum
 then
 	pmCmd="yum"
-	packageList="git-core pywebkitgtk"
+	packageList="git-core pywebkitgtk notify-python"
 else
 	echo "The script supports only apt-get and yum package managers."
 	echo "Setup exit."
