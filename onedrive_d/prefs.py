@@ -204,7 +204,7 @@ excluded automatically.""")
 	def serialize_settings(self):
 		configuration = {
 			"rootPath": self.locationChooser.get_filename(),
-			"exclude": [".*[<>?\*:\"\'\|]+.*"],
+			"exclude": [".*[<>?\*:\"\|]+.*"],
 			"exclude_WinFiles": self.exclude_WinFiles.get_active(),
 			"exclude_MacFiles": self.exclude_MacFiles.get_active(),
 			"exclude_LinuxTempFiles": self.exclude_LinuxTempFiles.get_active(),
