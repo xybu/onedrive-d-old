@@ -129,7 +129,7 @@ class DirScanner(threading.Thread):
 		threading.Thread.__init__(self)
 		SCANNER_QUEUE.put(self)
 		self.daemon = True
-		self._localPath = localPath
+		self._localPath = localPath.encode(sys.getfilesystemencoding())
 		self._remotePath = remotePath
 		self._raw_log = None
 	
@@ -178,11 +178,11 @@ class DirScanner(threading.Thread):
 	
 	# checkout one entry, either a dir or a file, from the log
 	def checkout(self, entry):
-		isExistent = os.path.exists(self._localPath + "/" + entry["name"])
+		localPath = (self._localPath + "/" + entry["name"]).encode(sys.getfilesystemencoding())
+		
+		isExistent = os.path.exists(localPath)
 		if isExistent:
 			del self._ent_list[self._ent_list.index(entry["name"])]
-		
-		localPath = self._localPath + "/" + entry["name"]
 		
 		if entry["type"] in "file|photo|audio|video":
 			if isExistent:
@@ -246,9 +246,9 @@ class LocalMonitor(threading.Thread):
 	
 	def handle(self, logItem):
 		print "local_mon: received a task: " + str(logItem)
-		dir = logItem[0]
+		dir = logItem[0].encode(sys.getfilesystemencoding())
 		event = logItem[1]
-		object = logItem[2]
+		object = logItem[2].encode(sys.getfilesystemencoding())
 		
 		if "MOVED_TO" in event:
 			TASK_QUEUE.put(Task("put", dir + object, dir.replace(self.rootPath, "")))
