@@ -109,39 +109,39 @@ class OneDrive_StatusIcon(gtk.StatusIcon):
 		self.item_quota.set_label("%.1f%% of %s Free" % (usedPercentage, totalSize))
 		self.item_quota.set_sensitive(False)
 	
-	def add_recent_change_item(self, path, description):
-		self._recent_change_lock.acquire()
-		self._recent_changes.append([path, description])
-		self._recent_change_lock.release()
-	
 	def show_notification_message(self, title = "OneDrive", text = None, icon = "notification-message-im", timeout = 3000):
 		if text == None:
 			text = ""
-			changes = self.get_recent_changes()
-			for item in changes:
+			for item in self._recent_changes:
 				text = text + item[0] + item[1] + "\n"
+			text = text[:-1]
+			# to make the list run away faster
+			del self._recent_changes[0]
 		
 		if not self._last_msg:
 			self._last_msg = notify2.Notification(title, text, icon)
 		else:
 			self._last_msg.update(title, text, icon)
 		self._last_msg.set_timeout(timeout)
+		self._last_msg.connect('closed', self.clear_recent_changes)
 		if not self._last_msg.show():
 			pass
 	
-	def get_recent_changes(self):
+	def clear_recent_changes(self):
+		printLog("clear_recent_changes")
 		self._recent_change_lock.acquire()
-		t = self._recent_changes
+		n = len(self._recent_changes)
+		for i in range(n):
+			del self._recent_changes[i]
 		self._recent_change_lock.release()
-		return t
 	
 	def add_recent_change(self, path, prompt_msg):
 		self._recent_change_lock.acquire()
 		self._recent_changes.append((path, prompt_msg))
 		if len(self._recent_changes) > config.MAX_RECENT_ITEMS:
 			del self._recent_changes[0]
-		self._recent_change_lock.release()
 		self.show_notification_message()
+		self._recent_change_lock.release()
 	
 	def run(self):
 		gtk.main()

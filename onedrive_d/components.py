@@ -107,7 +107,9 @@ class TaskWorker(threading.Thread):
 			print("subprocess stderr: " + ret[1])
 		print(self.getName() + ": executed task: " + t.debug())
 		
-		AGENT.add_recent_change(path = t.p2, prompt_msg = " was updated.")
+		if t.p1 == "": text = t.p2
+		else: text = t.p1
+		AGENT.add_recent_change(path = text, prompt_msg = " was updated.")
 		del t
 	
 	def run(self):
