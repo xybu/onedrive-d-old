@@ -10,7 +10,7 @@ except IOError:
 
 setup(
 	name='onedrive-d',
-	version='0.8',
+	version='0.85',
 	author='Xiangyu Bu',
 	author_email='xybu92@live.com',
 	license='MIT',
@@ -40,7 +40,7 @@ setup(
 		'Topic :: System :: Filesystems',
 		'Topic :: Utilities'],
 	
-	install_requires = ['requests', 'urllib3', 'PyYAML', 'python-onedrive'],
+	install_requires = ['requests', 'urllib3', 'PyYAML', 'python-onedrive', 'notify2'],
 	
 	packages=find_packages(),
 	include_package_data=True,

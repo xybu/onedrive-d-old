@@ -1,3 +1,0 @@
-When uploading a file, the message says the wrong path (path w/o filename).
-
-the "recent docs" API does not work as the expected way.

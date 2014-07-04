@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import sys, os, gc
-import gtk, gobject, pynotify
+import gtk, gobject, notify2
 import threading
 import subprocess
 import config
@@ -15,15 +15,17 @@ def printLog(text):
 	sys.stderr.write(text + "\n")
 
 class OneDrive_StatusIcon(gtk.StatusIcon):
-	_last_message = None
-	_recent_changes = []
-	_pynotify_flag = False
 	_icon = None
 	
 	def __init__(self, api):
+		if not notify2.init('onedrive-d'):
+			printLog('Failed to initialize notify2.')
+			sys.exit(1)
 		gtk.StatusIcon.__init__(self)
 		self.API = api
 		self._recent_change_lock = threading.Lock()
+		self._recent_changes = []
+		self._last_msg = None
 		
 		self._icon_pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.dirname(__file__) + "/res/icon_256.png")
 		
@@ -38,15 +40,6 @@ class OneDrive_StatusIcon(gtk.StatusIcon):
 		item_open = gtk.MenuItem("Open OneDrive directory")
 		item_open.connect("activate", self.e_show_root, "Open OneDrive directory")
 		menu.append(item_open)
-		
-		self.item_recent = item_recent = gtk.MenuItem("Recent changes")
-		item_recent_sub = gtk.Menu()
-		item_recent_sub_all = gtk.MenuItem("All changes")
-		item_recent_sub_all.connect("activate", self.e_show_monitor, None)
-		item_recent_sub.append(item_recent_sub_all)
-		item_recent_sub.append(gtk.SeparatorMenuItem())
-		item_recent.set_submenu(item_recent_sub)
-		menu.append(item_recent)
 		
 		menu.append(gtk.SeparatorMenuItem())
 		
@@ -63,10 +56,6 @@ class OneDrive_StatusIcon(gtk.StatusIcon):
 		item_settings = gtk.MenuItem("Settings")
 		item_settings.connect("activate", self.e_show_settings, None)
 		menu.append(item_settings)
-		
-		item_test = gtk.MenuItem("test item")
-		item_test.connect("activate", self.e_show_message, None)
-		menu.append(item_test)
 		
 		item_quit = gtk.MenuItem("Exit")
 		item_quit.connect("activate", self.quit, "file.quit")
@@ -120,26 +109,39 @@ class OneDrive_StatusIcon(gtk.StatusIcon):
 		self.item_quota.set_label("%.1f%% of %s Free" % (usedPercentage, totalSize))
 		self.item_quota.set_sensitive(False)
 	
-	def e_show_message(self, widget=None, event=None):
-		self.add_message("Title", "This is a test message!")
-	
 	def add_recent_change_item(self, path, description):
 		self._recent_change_lock.acquire()
 		self._recent_changes.append([path, description])
 		self._recent_change_lock.release()
 	
-	def add_message(self, title, text, icon = "notification-message-im", timeout = 4000):
-		if not self._pynotify_flag and not pynotify.init ("icon-summary-body"):
-			return
-		self.last_message = pynotify.Notification(title, text, icon)
-		self.last_message.set_timeout(timeout)
-		self.last_message.show()
-	
-	def add_recent_change(self, path):
-		submenu = self.item_recent.get_submenu()
-		if submenu == None:
+	def show_notification_message(self, title = "OneDrive", text = None, icon = "notification-message-im", timeout = 3000):
+		if text == None:
+			text = ""
+			changes = self.get_recent_changes()
+			for item in changes:
+				text = text + item[0] + item[1] + "\n"
+		
+		if not self._last_msg:
+			self._last_msg = notify2.Notification(title, text, icon)
+		else:
+			self._last_msg.update(title, text, icon)
+		self._last_msg.set_timeout(timeout)
+		if not self._last_msg.show():
 			pass
-		pass
+	
+	def get_recent_changes(self):
+		self._recent_change_lock.acquire()
+		t = self._recent_changes
+		self._recent_change_lock.release()
+		return t
+	
+	def add_recent_change(self, path, prompt_msg):
+		self._recent_change_lock.acquire()
+		self._recent_changes.append((path, prompt_msg))
+		if len(self._recent_changes) > config.MAX_RECENT_ITEMS:
+			del self._recent_changes[0]
+		self._recent_change_lock.release()
+		self.show_notification_message()
 	
 	def run(self):
 		gtk.main()

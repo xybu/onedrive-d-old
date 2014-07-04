@@ -30,6 +30,7 @@ QUOTA = {"free": 0, "total": 0}
 
 AUTHENTICATED = False
 
+MAX_RECENT_ITEMS = 5
 NUM_OF_WORKERS = 2
 NUM_OF_SCANNERS = 4
 TASK_QUEUE = Queue.Queue()

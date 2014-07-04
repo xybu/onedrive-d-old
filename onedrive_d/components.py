@@ -107,7 +107,7 @@ class TaskWorker(threading.Thread):
 			print("subprocess stderr: " + ret[1])
 		print(self.getName() + ": executed task: " + t.debug())
 		
-		AGENT.add_message(title = "OneDrive-d", text = t.p2 + " was updated.")
+		AGENT.add_recent_change(path = t.p2, prompt_msg = " was updated.")
 		del t
 	
 	def run(self):
