@@ -4,16 +4,16 @@ import sys
 import config
 
 def start_daemon_thread():
-	print "This function call should start a thread for the daemon."
+	print("This function call should start a thread for the daemon.")
 
 def start_gui_thread():
-	print "This function call should start a gui client thread."
+	print("This function call should start a gui client thread.")
 
 def print_help():
-	print 'Usage: onedrive-d [--no-gui] [--help]'
-	print '	--no-gui: start the daemon without GUI'
-	print '	--help: print the usage information'
-	print 'Current version: ' + config.APP_VERSION
+	print('Usage: onedrive-d [--no-gui] [--help]')
+	print('	--no-gui: start the daemon without GUI')
+	print('	--help: print the usage information')
+	print('Current version: ' + config.APP_VERSION + '')
 
 def main():
 	# print help info if '--help' is a cmd arg
@@ -27,4 +27,6 @@ def main():
 	if '--no-gui' not in sys.argv:
 		# start the GUI thread unless the user prefers no
 		start_gui_thread()
-	
+
+if __name__ == "__main__":
+	main()

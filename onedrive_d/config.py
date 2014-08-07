@@ -6,11 +6,11 @@ import json
 import logger
 
 OS_LOCAL_USER = os.getenv('SUDO_USER')
-if OS_LOCAL_USER == None or OS_LOCAL_USER == ':
+if OS_LOCAL_USER == None or OS_LOCAL_USER == '':
 	OS_LOCAL_USER = os.getenv('USER')
 
 if OS_LOCAL_USER == None:
-	print 'Error: cannot get the system username.'
+	print('Error: cannot get the system username.')
 	sys.exit(1)
 
 USER_HOME_PATH = os.path.expanduser('~' + OS_LOCAL_USER)
