@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 """
 A light-weight Live Connect OneDrive-RESTful API
@@ -140,8 +140,8 @@ class OneDrive_API:
 # test driver
 def main():
 	api = OneDrive_API(client_id = config.APP_CREDENTIALS["client_id"], client_secret = config.APP_CREDENTIALS["client_secret"])
-	print api.get_auth_uri()
-	print api.get_access_token("99314d29-c845-4854-5c09-f3dd6ccf604e")
+	print(api.get_auth_uri())
+	print(api.get_access_token("99314d29-c845-4854-5c09-f3dd6ccf604e"))
 
 if __name__ == "__main__":
 	main()

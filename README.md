@@ -11,7 +11,7 @@ that are unable or itchy to implement in old releases.
 
 The program consists of two parts, *main* and *prefs*. Both parts can run with and without GUI The program can run with and without GUI.
 
-The GUI library planned to use is `wxPython`.
+The GUI library planned to use is `PyGI`.
 
 ### Multi-threading
 

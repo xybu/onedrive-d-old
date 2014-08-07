@@ -3,11 +3,15 @@
 import sys
 import config
 
-def start_daemon_thread():
-	print("This function call should start a thread for the daemon.")
+thread_pool = []
 
-def start_gui_thread():
-	print("This function call should start a gui client thread.")
+def add_daemon_thread():
+	import daemon
+	thread_pool.append(daemon.OneDrive_DaemonThread())
+
+def add_monitor_thread():
+	import observer
+	thread_pool.append(observer.OneDrive_ObserverThread())
 
 def print_help():
 	print('Usage: onedrive-d [--no-gui] [--help]')
@@ -22,11 +26,17 @@ def main():
 		sys.exit(0)
 	
 	# start the daemon thread
-	start_daemon_thread()
+	add_daemon_thread()
 	
 	if '--no-gui' not in sys.argv:
 		# start the GUI thread unless the user prefers no
-		start_gui_thread()
-
+		add_monitor_thread()
+	
+	for t in thread_pool:
+		t.start()
+	
+	for t in thread_pool:
+		t.join()
+	
 if __name__ == "__main__":
 	main()
