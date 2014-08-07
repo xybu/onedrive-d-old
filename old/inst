@@ -1,0 +1,79 @@
+#!/bin/bash
+# Installation script for onedrive-d
+
+APP_CLIENT_ID="000000004010C916"
+APP_CLIENT_SECRET="PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi"
+
+# Determine if a command exists
+test_command() {
+	[ -x "$(which $1)" ]
+}
+
+# Installation
+do_install () {
+	rm -rf ~/.onedrive
+	sudo $pmCmd install $packageList
+	sudo pip install 'git+https://github.com/mk-fg/python-onedrive.git#egg=python-onedrive' --upgrade
+	sudo python setup.py install
+	sudo rm -r build dist onedrive_d.egg-info
+	sudo cp "./onedrive-d" "/etc/init.d/onedrive-d"
+	sudo chmod u+x "/etc/init.d/onedrive-d"
+	onedrive-prefs & 
+	echo "Setup is done. You can run onedrive-d command after finishing the settings."
+}
+
+# Uninstallation
+do_uninstall () {
+	sudo pip uninstall onedrive-d
+}
+
+echo "Start setting up onedrive-d package."
+
+if test_command apt-get
+then
+	pmCmd="apt-get"
+	packageList="git python-webkit"
+elif test_command yum
+then
+	pmCmd="yum"
+	packageList="git-core pywebkitgtk"
+else
+	echo "The script supports only apt-get and yum package managers."
+	echo "Setup exit."
+	exit 2
+fi
+echo "Detected package manager: $pmCmd"
+
+# Packages common to both package managers
+packageList="$packageList python-pip python-dateutil inotify-tools rcs"
+
+case "$1" in
+
+	install)
+		do_install
+		;;
+	
+	uninstall)
+		do_uninstall
+		;;
+	
+	reinstall)
+		do_uninstall
+		do_install
+		;;
+	
+	kill)
+		killall -9 onedrive-d
+		killall -9 inotifywait
+		killall -9 python
+		;;
+	
+	*)
+		echo "Usage: ./inst (install|uninstall|reinstall|kill)"
+		exit 1
+		;;
+	
+esac
+
+exit 0
+
