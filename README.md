@@ -9,9 +9,21 @@ that are unable or itchy to implement in old releases.
 
 ## Approaches
 
-The program consists of two parts, *daemon* and *prefs*. Both parts can run with and without GUI The program can run with and without GUI.
+The program consists of two parts, *main* and *prefs*. Both parts can run with and without GUI The program can run with and without GUI.
 
 The GUI library planned to use is `wxPython`.
+
+### Multi-threading
+
+The main process has two threads that work like client-server architecture.
+ * The *daemon* thread syncs the local repository with the OneDrive server and writes information to database;
+ * The *gui* thread provides a status icon and shows notifications.
+
+#### Daemon Thread
+
+The Daemon thread may create some helper threads.
+
+#### GUI Thread
 
 ## Reference Environment
 
