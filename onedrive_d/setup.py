@@ -37,7 +37,7 @@ setup(
 		'Topic :: System :: Filesystems',
 		'Topic :: Utilities'],
 	
-	install_requires = ['requests', 'urllib3', 'pygi'],
+	install_requires = ['requests', 'urllib3', 'certifi'],
 	
 	packages=find_packages(),
 	include_package_data=True,
