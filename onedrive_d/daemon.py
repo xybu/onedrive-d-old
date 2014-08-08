@@ -9,12 +9,20 @@ import logger
 
 class OneDrive_DaemonThread(threading.Thread):
 	
-	def __init__(self, log_path = None, log_min_level = logger.Logger.NOTSET):
+	def __init__(self):
 		super().__init__()
 		self.name = 'daemon'
 		self.daemon = True
-		self.logger = logger.Logger(log_path, log_min_level)
+		# the daemon prints to stderr
+		self.logger = logger.Logger(None, config.LOGGING_MIN_LEVEL)
+		self.observer_list = []
 		
 	def run(self):
-		self.logger.debug("This function call should start a thread for the daemon.")
+		self.logger.debug('started running.')
+	
+	def add_observer(self, observer_id):
+		self.observer_list.append(observer_id)
+		self.logger.debug('added an observer called ' + observer_id.name)
+	
+	
 	

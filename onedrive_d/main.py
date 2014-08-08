@@ -2,21 +2,26 @@
 
 import sys
 import config
+import live_api
+import logger
 
-thread_pool = []
+from daemon import OneDrive_DaemonThread
+from observer import OneDrive_ObserverThread
 
-def add_daemon_thread():
-	import daemon
-	thread_pool.append(daemon.OneDrive_DaemonThread())
+'''
+The daemon should implement the following functions:
+	add_observer(self, observer_id)
 
-def add_monitor_thread():
-	import observer
-	thread_pool.append(observer.OneDrive_ObserverThread())
+An observer should implement the following functions:
+	handle_event(self, event_id, event_args)
+	self.name
+'''
 
 def print_help():
-	print('Usage: onedrive-d [--no-gui] [--help]')
-	print('	--no-gui: start the daemon without GUI')
+	print('Usage: onedrive-d [--no-gui] [--help] [--no-prompt]')
+	print('	--no-gui: start the program without GUI components')
 	print('	--help: print the usage information')
+	print('	--no-prompt: when errors like auth failure occur, terminate program rather than showing dialogs')
 	print('Current version: ' + config.APP_VERSION + '')
 
 def main():
@@ -25,18 +30,53 @@ def main():
 		print_help()
 		sys.exit(0)
 	
-	# start the daemon thread
-	add_daemon_thread()
+	handler_name = 'gtk'
+	if '--no-gui' in sys.argv:
+		handler_name = 'default'
 	
-	if '--no-gui' not in sys.argv:
-		# start the GUI thread unless the user prefers no
-		add_monitor_thread()
+	try:
+		config.load_config()
+	except:
+		print('The configuration file either corrupted or does not exist. Rebuild.')
+		config.reset_config()
+		config.load_config()
 	
-	for t in thread_pool:
-		t.start()
+	api = live_api.OneDrive_API(config.APP_CLIENT_ID, config.APP_CLIENT_SECRET)
 	
-	for t in thread_pool:
-		t.join()
+	app_tokens = config.get_token()
+	if app_tokens == None:
+		token_invalid = True
+		if config.has_token():
+			# try to refresh the token
+			try:
+				app_tokens = api.refresh_token(config.APP_CONFIG['token']['refresh_token'])
+				config.save_token(app_tokens)
+				config.save_config()
+				token_invalid = False
+			except live_api.AuthError:
+				print('The client authorization has expired.')
+				if '--no-prompt' in sys.argv:
+					print('Please run `onedrive-prefs` to authorize the client.')
+					sys.exit(1)
+		if token_invalid:
+			# failed to renew the token, show prefs dialog
+			if '--no-gui' in sys.argv:
+				pass
+			else:
+				pass
+		
+		
+	
+	observer_thread = OneDrive_ObserverThread(handler_name = handler_name)
+	
+	daemon_thread = OneDrive_DaemonThread()
+	daemon_thread.add_observer(observer_thread)
+	
+	daemon_thread.start()
+	observer_thread.start()
+	
+	daemon_thread.join()
+	observer_thread.join()
 	
 if __name__ == "__main__":
 	main()
