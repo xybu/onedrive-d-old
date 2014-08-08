@@ -8,6 +8,7 @@ handler_name: gtk
 '''
 
 import os
+import subprocess
 import config
 from gi.repository import GLib
 from gi.repository import GObject

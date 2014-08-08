@@ -16,9 +16,12 @@ class OneDrive_DaemonThread(threading.Thread):
 		# the daemon prints to stderr
 		self.logger = logger.Logger(None, config.LOGGING_MIN_LEVEL)
 		self.observer_list = []
-		
+	
 	def run(self):
 		self.logger.debug('started running.')
+		if config.load_ignore_list() == 0:
+			self.logger.info('ignore list is empty.')
+		
 	
 	def add_observer(self, observer_id):
 		self.observer_list.append(observer_id)

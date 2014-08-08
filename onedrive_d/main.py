@@ -59,13 +59,16 @@ def main():
 					print('Please run `onedrive-prefs` to authorize the client.')
 					sys.exit(1)
 		if token_invalid:
-			# failed to renew the token, show prefs dialog
+			# failed to renew the token, show pref dialog
+			# the pref program should guide users to set up all confs.
 			if '--no-gui' in sys.argv:
 				pass
 			else:
 				pass
 		
-		
+	if not config.test_base_path():
+		print('Path of local OneDrive repository is unset or invalid. Exit.')
+		sys.exit(1)
 	
 	observer_thread = OneDrive_ObserverThread(handler_name = handler_name)
 	
