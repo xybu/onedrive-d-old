@@ -36,11 +36,11 @@ esac
 
 case $1 in
 	inst)
-		sudo rm -rf build dist *.egg-info setup.cfg onedrive_d/__pycache__
+		sudo rm -rf temp onedrive_d/temp build onedrive_d/build dist onedrive_d/dist *.egg-info onedrive_d/*.egg-info setup.cfg onedrive_d/setup.cfg onedrive_d/__pycache__
 		$INSTALL_CMD $GIT_PKG_NAME $SETUPTOOL_PKG_NAME $PYGOBJECT_PKG_NAME $INOTIFY_PKG_NAME
 		sudo python3 onedrive_d/setup.py install
 		sudo python3 onedrive_d/setup.py clean
-		sudo rm -rf build dist *.egg-info setup.cfg
+		sudo rm -rf temp onedrive_d/temp build onedrive_d/build dist onedrive_d/dist *.egg-info onedrive_d/*.egg-info setup.cfg onedrive_d/setup.cfg onedrive_d/__pycache__
 		mkdir ~/.onedrive
 		cp default/ignore_list.txt ~/.onedrive/ignore_list.txt
 		echo ""

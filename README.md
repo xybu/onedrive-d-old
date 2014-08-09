@@ -20,18 +20,18 @@ that are unable or itchy to implement in old releases.
  	 - [ ] Getting user data
  	 - [ ] Obtaining user consent
  	 - [ ] Read file property
- 	 - [ ] Read folder property
+ 	 - [X] Read folder property
  	 - [ ] Update file property
  	 - [ ] Update folder property
  	 - [ ] Get links to files and folders
- 	 - [ ] Get the storage quota information
+ 	 - [X] Get the storage quota information
  	 - [ ] Get a list of shared files / folders
  	 - [ ] Move or copy a file or folder
  	 - [ ] Delete a file
  	 - [ ] Create a folder
  	 - [ ] Delete a folder
- 	 - [ ] Get a list of most recently used documents
- 	 - [ ] Traverse the OneDrive directory
+ 	 - [X] Get a list of most recently used documents
+ 	 - [X] Traverse the OneDrive directory
  	 - [ ] Display a preview of an OneDrive item
  	 - [ ] Create an album
  	 - [ ] Update an album
@@ -48,12 +48,6 @@ that are unable or itchy to implement in old releases.
  - [X] Easily customizable ignore list
  - [ ] Installation scripts
 
-## Approaches
-
-The program consists of two parts, *main* and *prefs*. Both parts can run with and without GUI The program can run with and without GUI.
-
-The GUI library planned to use is `PyGI`.
-
 ## Installation
 
 Run command `./setup.sh` (planned)
@@ -61,6 +55,12 @@ Run command `./setup.sh` (planned)
 ## Uninstallation
 
 Run command `./setup.sh uninstall` (planned)
+
+## Approaches
+
+The program consists of two parts, *main* and *prefs*. Both parts can run with and without GUI The program can run with and without GUI.
+
+The GUI library planned to use is `PyGI`.
 
 ### Architecture
 
@@ -84,7 +84,20 @@ For `onedrive-d`, there are three major threads:
 
 #### onedrive-pref
 
-## Reference Environment
+## FAQ
+
+### Why are my files / dirs renamed to add *_conflict?
+
+For case conflicts, since NTFS is case-INsensitive, the local 
+repository cannot have two files whose names only differ in cases, say, `hello.c`
+and `Hello.c`. In this case one of them will be renamed `hello (case_conflict_1).c`
+and then get synced.
+
+For type conflicts, if the remote entry and local entry have the same
+name but different types, say, the local path `~/OneDrive/doc` is a file
+while in OneDrive server `/doc` is a folder, the local one will get renamed.
+
+### What is the reference environment?
 
 The program is tested on latest Xubuntu 64-bit and should work on other Debian/Ubuntu variants.
 

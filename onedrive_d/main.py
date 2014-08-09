@@ -1,20 +1,27 @@
 #!/usr/bin/python3
 
 import sys
+import time
 import config
+import threading
 import live_api
 import logger
 
-from daemon import OneDrive_DaemonThread
-from observer import OneDrive_ObserverThread
+DAEMON_PULL_INTERVAL = 20
 
 '''
 The daemon should implement the following functions:
 	add_observer(self, observer_id)
+	run(self)
+	stop(self)
 
 An observer should implement the following functions:
+	__init__(self, log)
+	name
+	set_daemon(self, obj)
 	handle_event(self, event_id, event_args)
-	self.name
+	stop(self)
+	run(self)
 '''
 
 def print_help():
@@ -29,10 +36,6 @@ def main():
 	if '--help' in sys.argv:
 		print_help()
 		sys.exit(0)
-	
-	handler_name = 'gtk'
-	if '--no-gui' in sys.argv:
-		handler_name = 'default'
 	
 	try:
 		config.load_config()
@@ -65,21 +68,37 @@ def main():
 				pass
 			else:
 				pass
-		
+	
 	if not config.test_base_path():
 		print('Path of local OneDrive repository is unset or invalid. Exit.')
 		sys.exit(1)
 	
-	observer_thread = OneDrive_ObserverThread(handler_name = handler_name)
+	api.set_access_token(config.APP_CONFIG['token']['access_token'])
 	
-	daemon_thread = OneDrive_DaemonThread()
-	daemon_thread.add_observer(observer_thread)
+	from daemon import OneDrive_DaemonThread
+	condition_var = threading.Event()
+	daemon_thread = OneDrive_DaemonThread(api, condition_var)
 	
-	daemon_thread.start()
-	observer_thread.start()
-	
-	daemon_thread.join()
-	observer_thread.join()
+	if '--no-gui' not in sys.argv:
+		from observer_gtk import OneDrive_Observer
+		observer = OneDrive_Observer(condition_var)
+		daemon_thread.add_observer(observer)
+		daemon_thread.start()
+		# now main thread will become the observer thread
+		observer.run()
+	else:
+		try:
+			# main thread is idle in this case
+			daemon_thread.start()
+			while True:
+				condition_var.set()
+				time.sleep(DAEMON_PULL_INTERVAL)
+		
+		except KeyboardInterrupt:
+			daemon_thread.stop()
+			condition_var.set()
+			daemon_thread.join()
+			sys.exit(0)
 	
 if __name__ == "__main__":
 	main()

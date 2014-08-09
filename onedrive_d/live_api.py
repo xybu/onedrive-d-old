@@ -30,6 +30,8 @@ class OneDrive_API:
 	OAUTH_AUTHORIZE_URI = 'https://login.live.com/oauth20_authorize.srf'
 	OAUTH_TOKEN_URI = 'https://login.live.com/oauth20_token.srf'
 	OAUTH_SIGNOUT_URI = 'https://login.live.com/oauth20_logout.srf'
+	API_URI = 'https://apis.live.net/v5.0/'
+	FOLDER_TYPES = ['folder', 'album']
 	
 	def __init__(self, client_id, client_secret, client_scope = DEFAULT_CLIENT_SCOPE, redirect_uri = DEFAULT_REDIRECT_URI):
 		'''
@@ -108,4 +110,24 @@ class OneDrive_API:
 		r = requests.post(OneDrive_API.OAUTH_TOKEN_URI, data = params)
 		return self.parse_response(r, AuthError)
 	
+	def get_recent_docs(self, user_id = 'me'):
+		r = requests.get(OneDrive_API.API_URI + user_id + '/skydrive/recent_docs?access_token=' + self.access_token)
+		return self.parse_response(r, ProtocolError)
+	
+	def get_quota(self, user_id = 'me'):
+		r = requests.get(OneDrive_API.API_URI + user_id + '/skydrive/quota?access_token=' + self.access_token)
+		return self.parse_response(r, ProtocolError)
+	
+	def get_root_entry_name(self):
+		return 'me/skydrive'
+	
+	def get_entry_info(self, entry_id = 'me/skydrive'):
+		r = requests.get(OneDrive_API.API_URI + entry_id + '?access_token=' + self.access_token)
+		data = self.parse_response(r, ProtocolError)['data']
+		return data
+	
+	def list_entries(self, folder_id = 'me/skydrive'):
+		r = requests.get(OneDrive_API.API_URI + folder_id + '/files?access_token=' + self.access_token)
+		data = self.parse_response(r, ProtocolError)['data']
+		return data
 	

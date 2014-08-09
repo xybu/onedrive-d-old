@@ -22,7 +22,7 @@ APP_CONFIG_FILE_PATH = APP_CONFIG_PATH + '/config.json'
 APP_CONFIG = {}
 APP_CLIENT_ID = '000000004010C916'
 APP_CLIENT_SECRET = 'PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi'
-APP_IGNORE_LIST = []
+APP_IGNORE_LIST = None
 APP_VERSION = '1.0-dev'
 APP_DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S%z'
 
@@ -70,7 +70,8 @@ def load_ignore_list():
 	if not os.path.isfile(file_path):
 		touch(file_path, '')
 	with open(file_path, 'r') as f:
-		APP_IGNORE_LIST = f.readlines()
+		global APP_IGNORE_LIST
+		APP_IGNORE_LIST = f.read().splitlines()
 	return len(APP_IGNORE_LIST)
 
 def save_ignore_list():

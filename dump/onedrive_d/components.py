@@ -266,7 +266,7 @@ class LocalMonitor(threading.Thread):
 			exclude_args = ["--exclude", CONF["exclude"]]
 		else:
 			exclude_args = []
-		subp = subprocess.Popen(['inotifywait', '-e', 'unmount,close_write,delete,move', '-cmr', self.rootPath] + exclude_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+		subp = subprocess.Popen(['inotifywait', '-e', 'unmount,close_write,delete,move,isdir', '-cmr', self.rootPath] + exclude_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 		while True:
 			# I think stdout buffer is fine for now
 			if EVENT_STOP.is_set():
