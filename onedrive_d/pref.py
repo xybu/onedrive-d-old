@@ -30,13 +30,6 @@ def main():
 		print('The log-in tokens have been successfully deleted.')
 		sys.exit(0)
 	
-	try:
-		config.load_config()
-	except:
-		print('The configuration file either corrupted or does not exist. Rebuild.')
-		config.reset_config()
-		config.load_config()
-	
 	if '--no-gui' in sys.argv:
 		from pref_cmd import OneDrive_PreferenceDialog
 	else:

@@ -28,8 +28,8 @@ that are unable or itchy to implement in old releases.
  	 - [ ] Get a list of shared files / folders
  	 - [ ] Move or copy a file or folder
  	 - [ ] Delete a file
- 	 - [ ] Create a folder
- 	 - [ ] Delete a folder
+ 	 - [X] Create a folder
+ 	 - [X] Delete a folder
  	 - [X] Get a list of most recently used documents
  	 - [X] Traverse the OneDrive directory
  	 - [ ] Display a preview of an OneDrive item

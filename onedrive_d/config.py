@@ -5,7 +5,7 @@ import sys
 import json
 from datetime import timezone, datetime, timedelta
 from pwd import getpwnam
-import logger
+from logger import Logger
 
 OS_LOCAL_USER = os.getenv('SUDO_USER')
 if OS_LOCAL_USER == None or OS_LOCAL_USER == '':
@@ -22,12 +22,10 @@ APP_CONFIG_FILE_PATH = APP_CONFIG_PATH + '/config.json'
 APP_CONFIG = {}
 APP_CLIENT_ID = '000000004010C916'
 APP_CLIENT_SECRET = 'PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi'
-APP_IGNORE_LIST = None
+APP_IGNORE_LIST = []
 APP_VERSION = '1.0-dev'
 APP_DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S%z'
-
-LOGGING_FILE_PATH = None
-LOGGING_MIN_LEVEL = logger.Logger.NOTSET
+APP_CONFIG_LOADED = False
 
 def now():
 	return datetime.now(timezone.utc)
@@ -60,26 +58,19 @@ def mkdir(path):
 	uid = getpwnam(OS_LOCAL_USER).pw_uid
 	os.chown(path, uid, -1)
 
-def load_config(path = APP_CONFIG_FILE_PATH):
-	with open(path, 'r') as f:
-		global APP_CONFIG
-		APP_CONFIG = json.load(f)
-
 def load_ignore_list():
 	file_path = APP_CONFIG_PATH + '/ignore_list.txt'
 	if not os.path.isfile(file_path):
 		touch(file_path, '')
-	with open(file_path, 'r') as f:
-		global APP_IGNORE_LIST
-		APP_IGNORE_LIST = f.read().splitlines()
+	f = open(file_path, 'r')
+	for line in f:
+		if not line.startswith('//') and line != '\n':
+			APP_IGNORE_LIST.append(line.strip())
+	f.close()
 	return len(APP_IGNORE_LIST)
 
-def save_ignore_list():
-	with open(APP_CONFIG_PATH + '/ignore_list.txt', 'w') as f:
-		f.write('\n'.join(APP_IGNORE_LIST))
-
 def reset_config(path = APP_CONFIG_FILE_PATH):
-	touch(path, '{}')
+	touch(path, '{"log_path": null}')
 
 def set_config(name, value):
 	APP_CONFIG[name] = value
@@ -110,3 +101,12 @@ def save_config(path = APP_CONFIG_FILE_PATH):
 	assert len(APP_CONFIG) > 0, 'The configuration dict is not loaded.'
 	with open(path, 'w') as f:
 		json.dump(APP_CONFIG, f)
+
+if not APP_CONFIG_LOADED:
+	if not os.path.exists(APP_CONFIG_FILE_PATH):
+		try: reset_config()
+		except OSError: pass
+	with open(APP_CONFIG_FILE_PATH, 'r') as f:
+		APP_CONFIG = json.load(f)
+	
+log = Logger(APP_CONFIG['log_path'], Logger.NOTSET)

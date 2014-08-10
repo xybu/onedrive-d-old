@@ -1,4 +1,7 @@
+// files that cannot be stored in NTFS namespace
 *[<>?*:"|]*
+
+// temp files
 *~
 .lock
 .netrwhist

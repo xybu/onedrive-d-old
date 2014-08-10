@@ -15,14 +15,23 @@ from urllib import parse
 
 class OneDrive_Error(Exception):
 	def __init__(self, args):
-		self.message = args["error"] + ": " + args["error_description"]
+		if 'error_description' in args:
+			self.message = args['error'] + ': ' + args['error_description']
+		elif 'error' in args:
+			self.message = args['error']['code'] + ': ' + args['error']['message']
+		else:
+			self.message = json.dumps(args)
 	
-	def __str__(self):
+	def __str__(self, ex = None):
 		return repr(self.message)
 
-class NetworkError(OneDrive_Error): pass
 class AuthError(OneDrive_Error): pass
+class NetworkError(OneDrive_Error):
+	def __init__(self, ex):
+		self.message = ex.__str__()
+		self.errno = ex.errno
 class ProtocolError(OneDrive_Error): pass
+class OperationError(OneDrive_Error): pass
 
 class OneDrive_API:
 	DEFAULT_CLIENT_SCOPE = ['wl.skydrive', 'wl.skydrive_update', 'wl.offline_access']
@@ -44,10 +53,10 @@ class OneDrive_API:
 		self.client_scope = client_scope
 		self.client_redirect_uri = redirect_uri
 	
-	def parse_response(self, request, error_class):
+	def parse_response(self, request, error, ok_status = requests.codes.ok):
 		ret = request.json()
-		if request.status_code != requests.codes.ok:
-			raise error_class(ret)
+		if request.status_code != ok_status:
+			raise error(ret)
 		return ret
 	
 	def get_auth_uri(self, display = 'touch', locale = 'en', state = ''):
@@ -92,8 +101,11 @@ class OneDrive_API:
 			"code": code,
 			"grant_type": "authorization_code"
 		}
-		r = requests.post(OneDrive_API.OAUTH_TOKEN_URI, data = params, verify = True)
-		return self.parse_response(r, AuthError)
+		try:
+			r = requests.post(OneDrive_API.OAUTH_TOKEN_URI, data = params, verify = True)
+			return self.parse_response(r, AuthError)
+		except requests.exceptions.ConnectionError as e:
+			raise NetworkError(e)
 	
 	def sign_out(self):
 		r = self.http_client.request('GET', OAUTH_SIGNOUT_URI + '?client_id=' + self.client_id + '&redirect_uri=' + self.client_redirect_uri)
@@ -107,27 +119,61 @@ class OneDrive_API:
 			"refresh_token": refresh_token,
 			"grant_type": 'refresh_token'
 		}
-		r = requests.post(OneDrive_API.OAUTH_TOKEN_URI, data = params)
-		return self.parse_response(r, AuthError)
+		try:
+			r = requests.post(OneDrive_API.OAUTH_TOKEN_URI, data = params)
+			return self.parse_response(r, AuthError)
+		except requests.exceptions.ConnectionError as e:
+			raise NetworkError(e)
 	
 	def get_recent_docs(self, user_id = 'me'):
-		r = requests.get(OneDrive_API.API_URI + user_id + '/skydrive/recent_docs?access_token=' + self.access_token)
-		return self.parse_response(r, ProtocolError)
+		try:
+			r = requests.get(OneDrive_API.API_URI + user_id + '/skydrive/recent_docs?access_token=' + self.access_token)
+			return self.parse_response(r, ProtocolError)
+		except requests.exceptions.ConnectionError as e:
+			raise NetworkError(e)
 	
 	def get_quota(self, user_id = 'me'):
-		r = requests.get(OneDrive_API.API_URI + user_id + '/skydrive/quota?access_token=' + self.access_token)
-		return self.parse_response(r, ProtocolError)
+		try:
+			r = requests.get(OneDrive_API.API_URI + user_id + '/skydrive/quota?access_token=' + self.access_token)
+			return self.parse_response(r, ProtocolError)
+		except requests.exceptions.ConnectionError as e:
+			raise NetworkError(e)
 	
 	def get_root_entry_name(self):
 		return 'me/skydrive'
 	
 	def get_entry_info(self, entry_id = 'me/skydrive'):
-		r = requests.get(OneDrive_API.API_URI + entry_id + '?access_token=' + self.access_token)
-		data = self.parse_response(r, ProtocolError)['data']
-		return data
+		try:
+			r = requests.get(OneDrive_API.API_URI + entry_id + '?access_token=' + self.access_token)
+			return self.parse_response(r, ProtocolError)
+		except requests.exceptions.ConnectionError as e:
+			raise NetworkError(e)
 	
 	def list_entries(self, folder_id = 'me/skydrive'):
-		r = requests.get(OneDrive_API.API_URI + folder_id + '/files?access_token=' + self.access_token)
-		data = self.parse_response(r, ProtocolError)['data']
-		return data
+		try:
+			r = requests.get(OneDrive_API.API_URI + folder_id + '/files?access_token=' + self.access_token)
+			return self.parse_response(r, ProtocolError)['data']
+		except requests.exceptions.ConnectionError as e:
+			raise NetworkError(e)
 	
+	def mkdir(self, folder_name, parent_id = 'me/skydrive'):
+		data = {'name': folder_name}
+		headers = {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + self.access_token
+		}
+		uri = OneDrive_API.API_URI + parent_id
+		try:
+			r = requests.post(uri, data = json.dumps(data), headers = headers)
+			return self.parse_response(r, OperationError, requests.codes.created)
+		except requests.exceptions.ConnectionError as e:
+			raise NetworkError(e)
+	
+	def rmdir(self, folder_id):
+		'''
+		OneDrive API always returns HTTP 204.
+		'''
+		try:
+			requests.delete(OneDrive_API.API_URI + folder_id + '?access_token=' + self.access_token)
+		except requests.exceptions.ConnectionError as e:
+			raise NetworkError(e)

@@ -1,5 +1,8 @@
 # Created by http://www.gitignore.io
 
+test_*
+tests/
+
 ### Linux ###
 *~
 

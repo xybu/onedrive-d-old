@@ -13,6 +13,10 @@ test_cmd() {
 	[ -x "$(which $1)" ]
 }
 
+clean() {
+	sudo rm -rf temp onedrive_d/temp build onedrive_d/build dist onedrive_d/dist *.egg-info onedrive_d/*.egg-info setup.cfg onedrive_d/setup.cfg onedrive_d/__pycache__
+}
+
 case $DISTRIB_ID in
 	debian|ubuntu)
 		PYGOBJECT_PKG_NAME='python3-gi'
@@ -36,11 +40,11 @@ esac
 
 case $1 in
 	inst)
-		sudo rm -rf temp onedrive_d/temp build onedrive_d/build dist onedrive_d/dist *.egg-info onedrive_d/*.egg-info setup.cfg onedrive_d/setup.cfg onedrive_d/__pycache__
+		clean()
 		$INSTALL_CMD $GIT_PKG_NAME $SETUPTOOL_PKG_NAME $PYGOBJECT_PKG_NAME $INOTIFY_PKG_NAME
 		sudo python3 onedrive_d/setup.py install
 		sudo python3 onedrive_d/setup.py clean
-		sudo rm -rf temp onedrive_d/temp build onedrive_d/build dist onedrive_d/dist *.egg-info onedrive_d/*.egg-info setup.cfg onedrive_d/setup.cfg onedrive_d/__pycache__
+		clean()
 		mkdir ~/.onedrive
 		cp default/ignore_list.txt ~/.onedrive/ignore_list.txt
 		echo ""
