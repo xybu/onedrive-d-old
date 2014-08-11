@@ -9,37 +9,7 @@ that are unable or itchy to implement in old releases.
 
 ### TODO Lists
 
- - [ ] Live Connect REST API written in Py3k
- 	 - [X] Get access token uri
- 	 - [X] Get access token
- 	 - [X] Refresh access token
- 	 - [X] Sign out
- 	 - [ ] Download a file
- 	 - [ ] Upload a file
- 	 - [ ] Update a file
- 	 - [ ] Getting user data
- 	 - [ ] Obtaining user consent
- 	 - [ ] Read file property
- 	 - [X] Read folder property
- 	 - [ ] Update file property
- 	 - [ ] Update folder property
- 	 - [ ] Get links to files and folders
- 	 - [X] Get the storage quota information
- 	 - [ ] Get a list of shared files / folders
- 	 - [ ] Move or copy a file or folder
- 	 - [ ] Delete a file
- 	 - [X] Create a folder
- 	 - [X] Delete a folder
- 	 - [X] Get a list of most recently used documents
- 	 - [X] Traverse the OneDrive directory
- 	 - [ ] Display a preview of an OneDrive item
- 	 - [ ] Create an album
- 	 - [ ] Update an album
- 	 - [ ] Read an album
- 	 - [ ] Delete an album
- 	 - [ ] Read a tag
- 	 - [ ] Create a tag
- 	 - [ ] Delete a tag
+ - [ ] A simple and light-weight Live Connect API written in Py3k
  - [X] Support both GUI and command-line interfaces
  	 - [X] Command-line preference dialog
  	 - [ ] Gtk preference Dialog
@@ -83,6 +53,16 @@ For `onedrive-d`, there are three major threads:
  	 * The observer may be hooked with either `default` or `gtk` event handlers, depending on the existence of `--no-gui`.
 
 #### onedrive-pref
+
+## ChangeLog
+
+### 1.0.0-dev
+
+ * Rewrite the program in Python 3.
+ * Built-in UTF-8 support.
+ * Detachable UI components.
+ * Better ignore list feature.
+ * And much more...
 
 ## FAQ
 
