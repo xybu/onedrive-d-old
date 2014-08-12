@@ -3,6 +3,7 @@
 import os
 import sys
 import json
+from calendar import timegm
 from datetime import timezone, datetime, timedelta
 from pwd import getpwnam
 from logger import Logger
@@ -43,13 +44,16 @@ def str_to_time(s):
 def timestamp_to_time(t):
 	return datetime.fromtimestamp(t, tz=timezone.utc)
 
+def str_to_timestamp(s):
+	return timegm(str_to_time(s).timetuple())
+
 def touch(path, data):
 	'''
 	Create a file and set up permission bits.
 	'''
 	if not os.path.isdir(os.path.dirname(path)):
 		mkdir(os.path.dirname(path))
-	with open(path, 'w') as f:
+	with open(path, 'wb') as f:
 		f.write(data)
 	uid = getpwnam(OS_LOCAL_USER).pw_uid
 	os.chown(path, uid, -1)

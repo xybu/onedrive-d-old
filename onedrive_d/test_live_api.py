@@ -19,7 +19,7 @@ target = None
 
 #print(api.set_property(target['id'], name = 'TestDoc.docx', description = 'Test change ds'))
 
-#print(api.put('test.wav', local_path = '/home/xb/OneDrive/arribba.wav'))
+print(api.put('test.wav', local_path = '/home/xb/OneDrive/arribba.wav'))
 
 #data = api.put('中文.txt', local_path = '中文.txt')
 #print(data)

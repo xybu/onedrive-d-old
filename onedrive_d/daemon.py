@@ -46,7 +46,7 @@ def resolve_case_conflict(path):
 	del ent_count
 	return ent_list
 	
-def resolve_conflict(path, s = 'type_conflict'):
+def resolve_conflict(path, s = 'type_conflict', lst = None):
 	'''
 	Used to rename a file / folder to something else to solve type 
 	inconsistency.
@@ -57,8 +57,51 @@ def resolve_conflict(path, s = 'type_conflict'):
 	'''
 	name, ext = os.path.splitext(path)
 	new_path = name + ' (' + s + ')' + ext
+	if lst != None and new_path in lst:
+		i = 0
+		while new_path in lst:
+			i += 1
+			new_path = name + ' (' + s + ', ' + i + ')' + ext
 	os.rename(path, new_path)
 	return os.path.basename(new_path)
+
+def find_entry(cursor, criteria):
+	wheres = []
+	for k in criteria:
+		wheres.append(k + '=:' + k)
+	cursor.execute('SELECT * from entries WHERE ' + ' AND '.join(wheres), criteria)
+	return cursor.fetchone()
+	
+
+def update_entry(cursor, entry):
+	cursor.execute('INSERT OR REPLACE INTO entries (parent_path, name, id, '
+		'parent_id, type, size, client_updated_time, status) VALUES '
+		'(:parent_path, :name, :id, :parent_id, :type, :size, :client_updated_time, :status)', entry)
+
+def add_work(cursor, type, path, remote_id = '', remote_parent_id = '', priority = 1, postwork = 'n'):
+	cursor.execute('INSERT INTO tasks '
+		'(task_type, local_path, remote_id, remote_parent_id, priority, date_created, postwork) VALUES '
+		'(?, ?, ?, ?, ?, ?, ?)', (type, path, remote_id, remote_parent_id, priority, config.time_to_str(config.now()), postwork))
+
+def add_notify(cursor, side, path, action):
+	path = path.replace(config.APP_CONFIG['base_path'], '', 1)
+	cursor.execute('INSERT INTO notifications '
+		'(side, display_path, action, time) VALUES '
+		'(?, ?, ?, ?)', (side, path, action, config.time_to_str(config.now())))
+
+def remote_mkdir(api, cursor, parent_path, name, parent_id):
+	try:
+		new_dir_info = api.mkdir(name, parent_id)
+		new_dir_info['type'] = 'folder'
+		new_dir_info['size'] = 0
+		new_dir_info['status'] = 'synced'
+		new_dir_info['parent_path'] = parent_path
+		update_entry(cursor, new_dir_info)
+		add_notify(cursor, 'remote', parent_path + name, 'created')
+	except live_api.OperationError as e:
+		config.log.error(str(e))
+	except live_api.NetworkError as e:
+		config.log.error(str(e))
 
 '''
 INotifyThread and Synchronizer add tasks to the taskqueue.
@@ -122,24 +165,126 @@ class OneDrive_INotifyThread(threading.Thread):
 		config.log.info('inotify shut down.')
 
 class OneDrive_SyncWorkerThread(threading.Thread):
-	def __init__(self, name, parent, switch, sem):
+	
+	lock = threading.RLock()
+	
+	def __init__(self, name, parent, api, switch, sem):
 		super().__init__()
 		self.name = name
 		self.daemon = True
 		self.switch = switch
 		self.sem = sem
+		self.api = api
 		self.parent = parent
 	
+	def find_entry(self, **kwargs):
+		return find_entry(self.cursor, kwargs)
+	
+	def update_entry(self, entry):
+		update_entry(self.cursor, entry)
+		self.conn.commit()
+	
+	def add_notify(self, side, path, action):
+		add_notify(self.cursor, side, path, action)
+		self.conn.commit()
+	
+	def remote_mkdir(self, parent_path, name, parent_id):
+		remote_mkdir(self.api, self.cursor, parent_path, name, parent_id)
+		# this implicitly calls update_entry so the changes are committed.
+	
+	def fetch_one_task(self):
+		OneDrive_SyncWorkerThread.lock.acquire()
+		self.cursor.execute('SELECT * FROM tasks WHERE priority=1 ORDER BY date_created ASC LIMIT 1')
+		row = self.cursor.fetchone()
+		if row != None:
+			self.cursor.execute('UPDATE tasks SET priority=0 WHERE id=?', (row['id'],))
+			self.conn.commit()
+		OneDrive_SyncWorkerThread.lock.release()
+		return row
+	
+	def do_postwork(self, row, updated_info = None):
+		parent_path, base_name = os.path.split(row['local_path'])
+		
+		if row['postwork'] == 'u':
+			self.cursor.execute('UPDATE entries SET status="synced" WHERE parent_path=? AND name=?', (parent_path, base_name))
+		elif row['postwork'] == 'n':
+			if updated_info != None: id = updated_info['id']
+			else: id = row['remote_id']
+			new_info = self.api.get_property(id)
+			new_info['type'] = 'file'
+			new_info['status'] = 'synced'
+			new_info['parent_path'] = parent_path
+			self.update_entry(new_info)
+		
+		if row['task_type'] == 'get':
+			# fix mtime
+			entry = self.find_entry(parent_path = parent_path, name = base_name)
+			assert entry != None
+			t = config.str_to_timestamp(entry['client_updated_time'])
+			os.utime(row['local_path'], (t, t))
+		
+		
 	def run(self):
 		config.log.info('worker starts running.')
+		
 		self.conn = sqlite3.connect(DAEMON_DB_PATH)
+		self.conn.row_factory = sqlite3.Row
 		self.cursor = self.conn.cursor()
 		
 		while True:
 			self.sem.acquire()
 			if self.switch.is_set(): break
-			config.log.debug('I acquired a sem and will work.')
+			config.log.debug('I passed two locks.')
+			row = self.fetch_one_task()
+			if row == None: continue
+			config.log.debug('I get a row from tasks table.')
+			try:
+				if row['task_type'] == 'get':
+					config.log.info('Downloading "' + row['local_path'] + '".')
+					f = open(row['local_path'], 'wb')
+					f.write(self.api.get(entry_id = row['remote_id']))
+					f.close()
+					#new_mtime = timegm)
+					#os.utime(t.p1, (new_mtime, new_mtime))
+					self.do_postwork(row)
+				elif row['task_type'] == 'put':
+					config.log.info('Uploading "' + row['local_path'] + '".')
+					update = self.api.put(name = os.path.basename(row['local_path']), 
+						folder_id = row['remote_parent_id'], 
+						local_path = row['local_path'])
+					self.do_postwork(row, update)
+				elif row['task_type'] == 'mkdir':
+					local_path = row['local_path']
+					config.log.info('Creating remote dir for "' + local_path + '"')
+					if local_path.endswith('/'): local_path = local_path[:-1]
+					parent_path, base_name = os.path.split(local_path)
+					self.remote_mkdir(parent_path + '/', base_name, row['remote_parent_id'])
+					# no special postwork to do
+				elif row['task_type'] == 'rm':
+					config.log.info('Delete remotely "' + row['local_path'] + '"')
+					self.api.rm(entry_id = row['remote_id'])
+					# TODO: update entries db.
+				elif row['task_type'] == 'cp':
+					config.log.info('Copying remotely "' + row['local_path'] + '" to dir "' + row['remote_parent_id'] + '"')
+					self.api.cp(target_id = row['remote_id'], dest_folder_id = row['remote_parent_id'])
+					# TODO: update entries db.
+				elif row['task_type'] == 'mv':
+					config.log.info('Copying remotely "' + row['local_path'] + '" to dir "' + row['remote_parent_id'] + '"')
+					self.api.mv(target_id = row['remote_id'], dest_folder_id = row['remote_parent_id'])
+					# TODO: update entries db.
+				
+				OneDrive_SyncWorkerThread.lock.acquire()
+				self.cursor.execute('UPDATE tasks SET priority=priority-1 WHERE priority!=1')
+				self.conn.commit()
+				OneDrive_SyncWorkerThread.lock.release()
+				
+			#except live_api.OneDrive_Error as e:
+			#	config.log.error(e.__class__.__name__ + ': ' + str(e))
+			except OSError as e:
+				config.log.error('OSError {0}: {1}. Path: {2}.'.format(e.errno, e.strerr, e.filename))
+			
 			self.parent.notify_all()
+		
 		self.conn.close()
 		
 		config.log.info('worker stops.')
@@ -165,45 +310,26 @@ class OneDrive_Synchronizer(threading.Thread):
 		self.empty_lock.set()
 	
 	def remote_mkdir(self, parent_path, name, parent_id):
-		try:
-			new_dir_info = self.api.mkdir(name, parent_id)
-			new_dir_info['type'] = 'folder'
-			new_dir_info['size'] = 0
-			new_dir_info['status'] = 'synced'
-			new_dir_info['parent_path'] = parent_path
-			self.update_entry(new_dir_info)
-			self.add_notify('remote', parent_path + name, 'created')
-			self.enqueue(parent_path + name + '/', new_dir_info['id'])
-		except live_api.OperationError as e:
-			config.log.error(e)
-		except live_api.NetworkError as e:
-			config.log.error(e)
+		remote_mkdir(self.api, self.cursor, parent_path, name, parent_id)
+		self.enqueue(parent_path + name + '/', new_dir_info['id'])
 	
-	def add_work(self, type, path, remote_id = '', remote_parent_id = '', priority = 3):
-		self.cursor.execute('INSERT INTO tasks '
-			'(task_type, local_path, remote_id, remote_parent_id, priority, date_created) VALUES '
-			'(?, ?, ?, ?, ?, ?)', (type, path, remote_id, remote_parent_id, priority, config.time_to_str(config.now())))
+	def add_work(self, type, path, remote_id = '', remote_parent_id = '', priority = 1, postwork = 'u'):
+		add_work(self.cursor, type, path, remote_id, remote_parent_id, priority, postwork)
 		self.pending_work_count += 1
+		self.conn.commit()
 	
 	def add_notify(self, side, path, action):
-		path = path.replace(config.APP_CONFIG['base_path'], '', 1)
-		self.cursor.execute('INSERT INTO notifications '
-			'(side, display_path, action, time) VALUES '
-			'(?, ?, ?, ?)', (side, path, action, config.time_to_str(config.now())))
+		add_notify(self.cursor, side, path, action)
+		self.conn.commit()
 		# there is little value to have this notification displayed immediately
 		# so do not tell daemon to notify observers
 	
 	def find_entry(self, **kwargs):
-		wheres = []
-		for k in kwargs.keys():
-			wheres.append(k + '=:' + k)
-		self.cursor.execute('SELECT * from entries WHERE ' + ' AND '.join(wheres), kwargs)
-		return self.cursor.fetchone()
+		return find_entry(self.cursor, kwargs)
 	
 	def update_entry(self, entry):
-		self.cursor.execute('INSERT OR REPLACE INTO entries (parent_path, name, id, '
-			'parent_id, type, size, client_updated_time, status) VALUES '
-			'(:parent_path, :name, :id, :parent_id, :type, :size, :client_updated_time, :status)', entry)
+		update_entry(self.cursor, entry)
+		self.conn.commit()
 	
 	def merge_dir(self, entry):
 		'''
@@ -213,7 +339,7 @@ class OneDrive_Synchronizer(threading.Thread):
 		
 		# if the dir does not exist locally, try creating it
 		if not os.path.exists(local_path):
-			try: os.mkdir(local_path)
+			try: config.mkdir(local_path)
 			except OSError:
 				pass
 		
@@ -242,7 +368,7 @@ class OneDrive_Synchronizer(threading.Thread):
 						resolved_name = resolve_conflict(target_path)
 						all_local_items.append(resolved_name)
 					except OSError as e:
-						config.log.critical(str(e))
+						config.log.error('OSError {0}: {1}. Path: {2}.'.format(e.errno, e.strerr, e.filename))
 						continue
 				self.update_entry(item)
 				self.enqueue(target_path + '/', item['id'])
@@ -267,15 +393,15 @@ class OneDrive_Synchronizer(threading.Thread):
 								# the file is changed offline, and the remote one wasn't changed before.
 								config.log.info('"' + target_path + ' is strictly newer. Upload it.')
 								item['status'] = 'put'
-								self.add_work('put', target_path, remote_parent_id = item['parent_id'])
+								self.add_work('put', target_path, remote_parent_id = item['parent_id'], postwork='n')
 							else:
 								# the files are changed and no way to guarantee which one is abs newer.
 								config.log.info('"' + target_path + ' is newer but conflicts can exist. Rename the local file.')
 								item['status'] = 'get'
 								try:
-									new_name = resolve_conflict(target_path, config.OS_HOSTNAME)
+									new_name = resolve_conflict(target_path, config.OS_HOSTNAME + ', newer')
 									all_local_items.append(new_name)
-									self.add_work('get', target_path, remote_id = item['id'])
+									self.add_work('get', target_path, remote_id = item['id'], postwork = 'n')
 								except OSError as e:
 									config.log.error('OSError {0}: {1}. Path: {2}.'.format(e.errno, e.strerr, e.filename))
 						else:
@@ -286,14 +412,14 @@ class OneDrive_Synchronizer(threading.Thread):
 								# the local file wasn't changed when the program is off.
 								config.log.info('"' + target_path + ' is strictly older. Download it.')
 								item['status'] = 'get'
-								self.add_work('get', target_path, remote_id = item['id'])
+								self.add_work('get', target_path, remote_id = item['id'], postwork = 'u')
 							else:
 								config.log.info('"' + target_path + ' is older but conflicts can exist. Rename the local file.')
 								item['status'] = 'get'
 								try:
-									new_name = resolve_conflict(target_path, config.OS_HOSTNAME)
+									new_name = resolve_conflict(target_path, config.OS_HOSTNAME + ', older')
 									all_local_items.append(new_name)
-									self.add_work('get', target_path, remote_id = item['id'])
+									self.add_work('get', target_path, remote_id = item['id'], postwork = 'n')
 								except OSError as e:
 									config.log.error('OSError {0}: {1}. Path: {2}.'.format(e.errno, e.strerr, e.filename))
 					except OSError as e:
@@ -304,14 +430,14 @@ class OneDrive_Synchronizer(threading.Thread):
 					if resolved_name != None:
 						all_local_items.append(resolved_name)
 						itme['status'] = 'get'
-						self.add_work('get', target_path, remote_id = item['id'])
+						self.add_work('get', target_path, remote_id = item['id'], postwork = 'n')
 					else:
 						config.log.critical('"' + target_path + '" cannot sync because of non-resolvable type conflict.')
 						continue
 				else:
 					# so the file does not exist locally.
 					item['status'] = 'get'
-					self.add_work('get', target_path, remote_id = item['id'])
+					self.add_work('get', target_path, remote_id = item['id'], postwork = 'n')
 				
 				self.update_entry(item)
 			
@@ -326,9 +452,7 @@ class OneDrive_Synchronizer(threading.Thread):
 				self.remote_mkdir(local_path, item, remote_path)
 			else:
 				config.log.debug('Local file "' + local_path + name + '" does not exist remotely. Upload it.')
-				self.add_work('put', local_path + name, remote_parent_id = remote_path)
-		
-		self.conn.commit()
+				self.add_work('put', local_path + name, remote_parent_id = remote_path, postwork = 'n')
 		
 		while self.pending_work_count > 0:
 			self.sem.release()
@@ -337,7 +461,10 @@ class OneDrive_Synchronizer(threading.Thread):
 	def restart(self):
 		if self.queue.empty():
 			config.log.info('restart the synchronizer.')
+			# remove the old task records since they are not needed anymore.
 			self.enqueue(config.APP_CONFIG['base_path'] + '/', self.api.get_root_entry_name())
+			return True
+		return False
 	
 	def stop(self):
 		self.empty_lock.set()
@@ -402,19 +529,21 @@ class OneDrive_DaemonThread(threading.Thread):
 			size INT, client_updated_time TEXT, status TEXT)
 			''')
 		# self.cursor.execute('CREATE UNIQUE INDEX IF NOT EXISTS local_path ON entries (parent_path, name)')
+		self.cursor.execute('DROP TABLE IF EXISTS tasks')
 		self.cursor.execute('''
-			CREATE TABLE IF NOT EXISTS tasks 
-			(task_type TEXT, local_path TEXT, remote_id TEXT, 
-			remote_parent_id TEXT, priority INT DEFAULT 1, 
+			CREATE TABLE tasks 
+			(id INTEGER PRIMARY KEY AUTOINCREMENT, task_type TEXT, 
+			local_path TEXT, remote_id TEXT, remote_parent_id TEXT, 
+			priority INT DEFAULT 1, postwork TEXT,
 			date_created TEXT DEFAULT CURRENT_TIMESTAMP)
 			''')
+		self.cursor.execute('DROP TABLE IF EXISTS notifications')
 		self.cursor.execute('''
-			CREATE TABLE IF NOT EXISTS notifications 
+			CREATE TABLE notifications 
 			(side TEXT, display_path TEXT, action TEXT, 
 			time TEXT DEFAULT CURRENT_TIMESTAMP)
 			''')
 		self.conn.commit()
-		self.conn.close()
 		
 		self.is_running = True
 		
@@ -424,15 +553,19 @@ class OneDrive_DaemonThread(threading.Thread):
 		self.inotify_thread.start()
 		
 		for i in range(MAX_WORKER_NUM):
-			w = OneDrive_SyncWorkerThread('worker ' + str(i), self, self.children_lock, self.worker_sem)
+			w = OneDrive_SyncWorkerThread('worker ' + str(i), self, self.api, self.children_lock, self.worker_sem)
 			self.worker_list.append(w)
 			w.start()
 		
 		# periodically run the deep sync work
 		while self.is_running:
 			self.cv.clear()
-			self.sync_thread.restart()
+			if self.sync_thread.restart():
+				self.cursor.execute('DELETE FROM tasks WHERE priority<0')
+				self.conn.commit()
 			self.cv.wait()
+		
+		self.conn.close()
 		
 		for w in self.worker_list: w.join()
 		self.sync_thread.stop()

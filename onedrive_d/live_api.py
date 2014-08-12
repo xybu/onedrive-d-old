@@ -272,7 +272,10 @@ class OneDrive_API:
 		
 		try:
 			r = self.http_client.put(uri, data = data)
-			return self.parse_response(r, ProtocolError, requests.codes.created)
+			ret = r.json()
+			if r.status_code != requests.codes.ok and r.status_code != requests.codes.created:
+				raise ProtocolError(ret)
+			return ret
 		except requests.exceptions.ConnectionError as e:
 			raise NetworkError(e)
 		
@@ -283,7 +286,7 @@ class OneDrive_API:
 			if local_path != None:
 				with open(local_path, 'wb') as f:
 					f.write(r.content)
-			return r.content
+			else: return r.content
 		except requests.exceptions.ConnectionError as e:
 			raise NetworkError(e)
 	

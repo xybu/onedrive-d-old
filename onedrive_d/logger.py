@@ -54,7 +54,7 @@ class Logger:
 		"""
 		Write the string s to the log.
 		"""
-		self._file.write('[' + strftime('%c') + '] (' + current_thread().name + ') ' + s + '\n')
+		self._file.write('[' + strftime('%c') + '] (' + current_thread().name + ')\t' + s + '\n')
 	
 	def debug(self, s):
 		"""

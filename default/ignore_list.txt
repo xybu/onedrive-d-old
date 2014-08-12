@@ -1,7 +1,7 @@
-// files that cannot be stored in NTFS namespace
+// exclude files outside NTFS namespaces
 *[<>?*:"|]*
 
-// temp files
+// exclude temporary files
 *~
 .lock
 .netrwhist
@@ -10,15 +10,12 @@ Session.vim
 *.swp
 *._swp
 #*#
-.emacs
-.desktop
-.emacs.desktop.lock
+.emacs.desktop*
 *.elc
 .#*
 .org-id-locations
 *_flymake.*
 .DS_Store
-Icon.?
 .AppleDouble
 .LSOverride
 ._*
