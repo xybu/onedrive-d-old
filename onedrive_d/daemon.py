@@ -46,15 +46,19 @@ def resolve_case_conflict(path):
 	del ent_count
 	return ent_list
 	
-def resolve_type_conflict(path):
-	try:
-		os.rename(path, path + ' (type_conflict)')
-		os.mkdir(path)
-		return True
-	except OSError as ex:
-		config.log.critical('an error occured renaming "' + path + '" to "' + path + ' (type_conflict)"')
-		return False
+def resolve_conflict(path, s = 'type_conflict'):
+	'''
+	Used to rename a file / folder to something else to solve type 
+	inconsistency.
 	
+	@raises OSError
+	
+	But what if there is already a file called "sth (type_conflict)"?
+	'''
+	name, ext = os.path.splitext(path)
+	new_path = name + ' (' + s + ')' + ext
+	os.rename(path, new_path)
+	return os.path.basename(new_path)
 
 '''
 INotifyThread and Synchronizer add tasks to the taskqueue.
@@ -169,13 +173,13 @@ class OneDrive_Synchronizer(threading.Thread):
 			new_dir_info['parent_path'] = parent_path
 			self.update_entry(new_dir_info)
 			self.add_notify('remote', parent_path + name, 'created')
-			self.enqueue(parent_path + name, new_dir_info['id'])
+			self.enqueue(parent_path + name + '/', new_dir_info['id'])
 		except live_api.OperationError as e:
 			config.log.error(e)
 		except live_api.NetworkError as e:
 			config.log.error(e)
 	
-	def add_work(self, type, path, remote_id, remote_parent_id, priority = 1):
+	def add_work(self, type, path, remote_id = '', remote_parent_id = '', priority = 3):
 		self.cursor.execute('INSERT INTO tasks '
 			'(task_type, local_path, remote_id, remote_parent_id, priority, date_created) VALUES '
 			'(?, ?, ?, ?, ?, ?)', (type, path, remote_id, remote_parent_id, priority, config.time_to_str(config.now())))
@@ -189,6 +193,13 @@ class OneDrive_Synchronizer(threading.Thread):
 		# there is little value to have this notification displayed immediately
 		# so do not tell daemon to notify observers
 	
+	def find_entry(self, **kwargs):
+		wheres = []
+		for k in kwargs.keys():
+			wheres.append(k + '=:' + k)
+		self.cursor.execute('SELECT * from entries WHERE ' + ' AND '.join(wheres), kwargs)
+		return self.cursor.fetchone()
+	
 	def update_entry(self, entry):
 		self.cursor.execute('INSERT OR REPLACE INTO entries (parent_path, name, id, '
 			'parent_id, type, size, client_updated_time, status) VALUES '
@@ -200,13 +211,11 @@ class OneDrive_Synchronizer(threading.Thread):
 		'''
 		local_path, remote_path = entry
 		
+		# if the dir does not exist locally, try creating it
 		if not os.path.exists(local_path):
 			try: os.mkdir(local_path)
-			except OSError as exc:
-				if not os.path.isdir(local_path):
-					if not resolve_type_conflict(local_path):
-						config.log.critical('"' + local_path + '" cannot sync with remote because of non-resolvable type conflict.')
-						return
+			except OSError:
+				pass
 		
 		config.log.info('syncing ' + local_path)
 		
@@ -214,35 +223,110 @@ class OneDrive_Synchronizer(threading.Thread):
 		all_local_items = resolve_case_conflict(local_path)
 		
 		for item in all_remote_items:
+			
+			target_path = local_path + item['name']
 			item['parent_path'] = local_path
 			
 			if is_ignorable(item['name']):
 				config.log.info('Skipped remote entry "' + item['name'] + '"')
+				pass
 			elif item['type'] in self.api.FOLDER_TYPES:
+				# if the item is a folder, resolve possible conflict
+				# and then add it to the bfs queue.
 				item['type'] = 'folder'
 				item['size'] = 0
 				item['status'] = 'synced'
+				if os.path.isfile(target_path):
+					confog.log.warning('"' + target_path + '" is a dir remotely, but file locally.')
+					try:
+						resolved_name = resolve_conflict(target_path)
+						all_local_items.append(resolved_name)
+					except OSError as e:
+						config.log.critical(str(e))
+						continue
 				self.update_entry(item)
-				# add it to queue for bfs
-				self.queue.put((local_path + item['name'] + '/', item['id']))
+				self.enqueue(target_path + '/', item['id'])
 			else:
+				# so the entry is a file
+				# first check if the local file exists
 				item['type'] = 'file'
-				item['status'] = 'synced'
+				if os.path.isfile(target_path):
+					# so both sides are files, compare their mtime
+					try:
+						local_mtime = config.timestamp_to_time(os.path.getmtime(target_path))
+						remote_mtime = config.str_to_time(item['client_updated_time'])
+						if local_mtime == remote_mtime:
+							# same files, same timestamp
+							# TODO: What if the files are different in content?
+							item['status'] = 'synced'
+							# config.log.debug(entry_local_path + ' was not changed. Skip.')
+						elif local_mtime > remote_mtime:
+							# local file is newer, upload it
+							row = self.find_entry(parent_path = local_path, name = item['name'])
+							if row != None and row['id'] == item['id'] and config.str_to_time(row['client_updated_time']) == remote_mtime:
+								# the file is changed offline, and the remote one wasn't changed before.
+								config.log.info('"' + target_path + ' is strictly newer. Upload it.')
+								item['status'] = 'put'
+								self.add_work('put', target_path, remote_parent_id = item['parent_id'])
+							else:
+								# the files are changed and no way to guarantee which one is abs newer.
+								config.log.info('"' + target_path + ' is newer but conflicts can exist. Rename the local file.')
+								item['status'] = 'get'
+								try:
+									new_name = resolve_conflict(target_path, config.OS_HOSTNAME)
+									all_local_items.append(new_name)
+									self.add_work('get', target_path, remote_id = item['id'])
+								except OSError as e:
+									config.log.error('OSError {0}: {1}. Path: {2}.'.format(e.errno, e.strerr, e.filename))
+						else:
+							# in this branch the local file is older.
+							row = self.find_entry(parent_path = local_path, name = item['name'])
+							if row != None and row['id'] == item['id'] and config.str_to_time(row['client_updated_time']) == local_mtime:
+								# so the remote file is absolutely newer
+								# the local file wasn't changed when the program is off.
+								config.log.info('"' + target_path + ' is strictly older. Download it.')
+								item['status'] = 'get'
+								self.add_work('get', target_path, remote_id = item['id'])
+							else:
+								config.log.info('"' + target_path + ' is older but conflicts can exist. Rename the local file.')
+								item['status'] = 'get'
+								try:
+									new_name = resolve_conflict(target_path, config.OS_HOSTNAME)
+									all_local_items.append(new_name)
+									self.add_work('get', target_path, remote_id = item['id'])
+								except OSError as e:
+									config.log.error('OSError {0}: {1}. Path: {2}.'.format(e.errno, e.strerr, e.filename))
+					except OSError as e:
+						config.log.error('OSError {0}: {1}. Path: {2}.'.format(e.errno, e.strerr, e.filename))
+				elif os.path.isdir(target_path):
+					# the local file is a dir but the remote path is a file
+					resolved_name = resolve_conflict(target_path)
+					if resolved_name != None:
+						all_local_items.append(resolved_name)
+						itme['status'] = 'get'
+						self.add_work('get', target_path, remote_id = item['id'])
+					else:
+						config.log.critical('"' + target_path + '" cannot sync because of non-resolvable type conflict.')
+						continue
+				else:
+					# so the file does not exist locally.
+					item['status'] = 'get'
+					self.add_work('get', target_path, remote_id = item['id'])
+				
 				self.update_entry(item)
-				#print(item['name'] + ' is a file.')
 			
 			if item['name'] in all_local_items:
 				all_local_items.remove(item['name'])
 		
 		# process untouched local items
-		for item in all_local_items:
-			if is_ignorable(item):
-				config.log.info('Skipped local entry "' + item + '"')
-			elif os.path.isdir(local_path + item):
-				config.log.debug('Local dir "' + local_path + item + '" does not exist remotely. Create it.')
+		for name in all_local_items:
+			if is_ignorable(name): pass
+			elif os.path.isdir(local_path + name):
+				config.log.debug('Local dir "' + local_path + name + '" does not exist remotely. Create it.')
 				self.remote_mkdir(local_path, item, remote_path)
 			else:
-				print(item + ' is an untouched file.')
+				config.log.debug('Local file "' + local_path + name + '" does not exist remotely. Upload it.')
+				self.add_work('put', local_path + name, remote_parent_id = remote_path)
 		
 		self.conn.commit()
 		
@@ -261,6 +345,7 @@ class OneDrive_Synchronizer(threading.Thread):
 	def run(self):
 		config.log.info('syncer starts running')
 		self.conn = sqlite3.connect(DAEMON_DB_PATH)
+		self.conn.row_factory = sqlite3.Row
 		self.cursor = self.conn.cursor()
 		
 		# when switch is set, the thread should stop
@@ -310,10 +395,24 @@ class OneDrive_DaemonThread(threading.Thread):
 		
 		self.conn = sqlite3.connect(DAEMON_DB_PATH)
 		self.cursor = self.conn.cursor()
-		self.cursor.execute('CREATE TABLE IF NOT EXISTS entries (parent_path TEXT, name TEXT, type TEXT, id TEXT UNIQUE PRIMARY KEY, parent_id TEXT PRIMARY_KEY, size INT, client_updated_time TEXT, status TEXT)')
+		self.cursor.execute('''
+			CREATE TABLE IF NOT EXISTS entries 
+			(parent_path TEXT, name TEXT, type TEXT, 
+			id TEXT UNIQUE PRIMARY KEY, parent_id TEXT PRIMARY_KEY, 
+			size INT, client_updated_time TEXT, status TEXT)
+			''')
 		# self.cursor.execute('CREATE UNIQUE INDEX IF NOT EXISTS local_path ON entries (parent_path, name)')
-		self.cursor.execute('CREATE TABLE IF NOT EXISTS tasks (task_type TEXT, local_path TEXT, remote_id TEXT, remote_parent_id TEXT, priority INT DEFAULT 1, date_created TEXT DEFAULT CURRENT_TIMESTAMP)')
-		self.cursor.execute('CREATE TABLE IF NOT EXISTS notifications (side TEXT, display_path TEXT, action TEXT, time TEXT DEFAULT CURRENT_TIMESTAMP)')
+		self.cursor.execute('''
+			CREATE TABLE IF NOT EXISTS tasks 
+			(task_type TEXT, local_path TEXT, remote_id TEXT, 
+			remote_parent_id TEXT, priority INT DEFAULT 1, 
+			date_created TEXT DEFAULT CURRENT_TIMESTAMP)
+			''')
+		self.cursor.execute('''
+			CREATE TABLE IF NOT EXISTS notifications 
+			(side TEXT, display_path TEXT, action TEXT, 
+			time TEXT DEFAULT CURRENT_TIMESTAMP)
+			''')
 		self.conn.commit()
 		self.conn.close()
 		

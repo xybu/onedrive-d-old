@@ -7,6 +7,7 @@ from datetime import timezone, datetime, timedelta
 from pwd import getpwnam
 from logger import Logger
 
+OS_HOSTNAME = os.uname()[1]
 OS_LOCAL_USER = os.getenv('SUDO_USER')
 if OS_LOCAL_USER == None or OS_LOCAL_USER == '':
 	OS_LOCAL_USER = os.getenv('USER')
@@ -38,6 +39,9 @@ def time_to_str(t):
 
 def str_to_time(s):
 	return datetime.strptime(s, APP_DATETIME_FORMAT)
+
+def timestamp_to_time(t):
+	return datetime.fromtimestamp(t, tz=timezone.utc)
 
 def touch(path, data):
 	'''
