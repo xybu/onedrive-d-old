@@ -447,8 +447,13 @@ class OneDrive_Synchronizer(threading.Thread):
 		# process untouched local items
 		for name in all_local_items:
 			if is_ignorable(name): pass
+			entry_record = self.find_entry(parent_path = local_path, name = name)
+			if entry_record != None:
+				config.log.debug('The entry "' + local_path + name + '" may have been deleted remotely but not reflected locally.')
+				
 			elif os.path.isdir(local_path + name):
 				config.log.debug('Local dir "' + local_path + name + '" does not exist remotely. Create it.')
+				
 				self.remote_mkdir(local_path, item, remote_path)
 			else:
 				config.log.debug('Local file "' + local_path + name + '" does not exist remotely. Upload it.')

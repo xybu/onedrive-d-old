@@ -30,14 +30,14 @@ setup(
 		'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
 		'Operating System :: POSIX :: Linux',
 		'Programming Language :: Python',
-		'Programming Language :: Python :: 2.7',
+		'Programming Language :: Python :: 3',
 		'Topic :: Internet',
 		'Topic :: Software Development',
 		'Topic :: System :: Archiving',
 		'Topic :: System :: Filesystems',
 		'Topic :: Utilities'],
 	
-	install_requires = ['requests', 'urllib3', 'certifi'],
+	install_requires = ['requests', 'urllib3', 'certifi', 'send2trash'],
 	
 	packages=find_packages(),
 	include_package_data=True,
