@@ -13,9 +13,11 @@ import sqlite3
 import fnmatch
 import config
 import live_api
+from send2trash import send2trash
 
 MAX_WORKER_NUM = 2
 DAEMON_DB_PATH = config.APP_CONFIG_PATH + '/onedrive.sqlite'
+SYNC_FINISH_LOCK = threading.RLock()
 
 def is_ignorable(name):
 	for pattern in config.APP_IGNORE_LIST:
@@ -69,39 +71,76 @@ def find_entry(cursor, criteria):
 	wheres = []
 	for k in criteria:
 		wheres.append(k + '=:' + k)
-	cursor.execute('SELECT * from entries WHERE ' + ' AND '.join(wheres), criteria)
+	cursor.execute('SELECT * FROM entries WHERE ' + ' AND '.join(wheres), criteria)
 	return cursor.fetchone()
-	
 
-def update_entry(cursor, entry):
-	cursor.execute('INSERT OR REPLACE INTO entries (parent_path, name, id, '
+def delete_tree(conn, parent_path, name, type = None):
+	'''Delete an entry and its sub-entries, if any.'''
+	config.log.debug('delete_tree(conn, "{0}", "{1}", "{2}")'.format(parent_path, name, type))
+	cursor = conn.cursor()
+	if type == None:
+		# correct the type param if missing
+		cursor.execute('SELECT * FROM entries WHERE parent_path=? AND name=?', (parent_path, name))
+		entry = cursor.fetchone()
+		type = entry['type']
+	
+	if type == 'folder':
+		# is a dir, delete recursively
+		buf = (parent_path + name + '/',)
+		cursor.execute('SELECT * FROM entries WHERE type="folder" AND parent_path=?', buf)
+		queried_entries = cursor.fetchall()
+		for row in queried_entries:
+			delete_tree(cursor, row['parent_path'], row['name'], 'folder')
+		conn.execute('DELETE FROM entries WHERE parent_path=?', buf)
+	
+	conn.execute('DELETE FROM entries WHERE parent_path=? AND name=?', (parent_path, name))
+	
+	cursor.close()
+
+def update_entry(conn, entry):
+	
+	conn.execute('INSERT OR REPLACE INTO entries (parent_path, name, id, '
 		'parent_id, type, size, client_updated_time, status) VALUES '
 		'(:parent_path, :name, :id, :parent_id, :type, :size, :client_updated_time, :status)', entry)
 
-def add_work(cursor, type, path, remote_id = '', remote_parent_id = '', priority = 1, postwork = 'n'):
-	cursor.execute('INSERT INTO tasks '
+def update_status(conn, status, criteria):
+	wheres = []
+	for k in criteria:
+		wheres.append(k + '=:' + k)
+	criteria[':new_status'] = status
+	
+	conn.execute('UPDATE entries SET status=:new_status WHERE ' + ' AND '.join(wheres), criteria)
+	
+
+def add_work(conn, type, path, remote_id = '', remote_parent_id = '', priority = 1, postwork = 'n'):
+	conn.execute('INSERT INTO tasks '
 		'(task_type, local_path, remote_id, remote_parent_id, priority, date_created, postwork) VALUES '
 		'(?, ?, ?, ?, ?, ?, ?)', (type, path, remote_id, remote_parent_id, priority, config.time_to_str(config.now()), postwork))
 
-def add_notify(cursor, side, path, action):
+def add_notify(conn, side, path, action):
 	path = path.replace(config.APP_CONFIG['base_path'], '', 1)
-	cursor.execute('INSERT INTO notifications '
+	conn.execute('INSERT INTO notifications '
 		'(side, display_path, action, time) VALUES '
 		'(?, ?, ?, ?)', (side, path, action, config.time_to_str(config.now())))
 
-def remote_mkdir(api, cursor, parent_path, name, parent_id):
+def remote_mkdir(api, conn, parent_path, name, parent_id):
 	try:
+		SYNC_FINISH_LOCK.acquire()
 		new_dir_info = api.mkdir(name, parent_id)
 		new_dir_info['type'] = 'folder'
 		new_dir_info['size'] = 0
 		new_dir_info['status'] = 'synced'
 		new_dir_info['parent_path'] = parent_path
-		update_entry(cursor, new_dir_info)
-		add_notify(cursor, 'remote', parent_path + name, 'created')
+		update_entry(conn, new_dir_info)
+		add_notify(conn, 'remote', parent_path + name, 'created')
+		SYNC_FINISH_LOCK.release()
+		return new_dir_info
 	except live_api.OperationError as e:
 		config.log.error(str(e))
+		return None
 	except live_api.NetworkError as e:
 		config.log.error(str(e))
+		return None
 
 '''
 INotifyThread and Synchronizer add tasks to the taskqueue.
@@ -122,14 +161,37 @@ class OneDrive_INotifyThread(threading.Thread):
 				ignore_list.append(fnmatch.translate(item).replace('\\Z(?ms)', ''))
 			self.inotify_args += ['--exclude', '(' +'|'.join(ignore_list) + ')']
 	
+	def add_work(self, type, path, remote_id = '', remote_parent_id = '', priority = 1, postwork = 'u'):
+		add_work(self.conn, type, path, remote_id, remote_parent_id, priority, postwork)
+		self.sem.release()
+	
+	def find_entry(self, **kwargs):
+		config.log.debug('find_entry({})'.format(kwargs))
+		return find_entry(self.cursor, kwargs)
+	
+	def find_parent(self, path):
+		if path.endswith('/'): path = path[:-1]
+		SYNC_FINISH_LOCK.acquire()
+		parent_dirname, parent_basename = os.path.split(path)
+		parent_dirent = self.find_entry(parent_path = parent_dirname + '/', name = parent_basename)
+		SYNC_FINISH_LOCK.release()
+		return parent_dirent
+	
 	def on_task_created(self, task):
 		self.sem.release()
 		path, event, name = task
-		config.log.info(str(task))
+		
 		if 'CLOSE_WRITE' in event:
 			# the given file is created or modified
 			# put
-			pass
+			self.cursor.execute('SELECT * FROM tasks WHERE task_type IN ("get", "put") AND local_path=?', (path + name,))
+			rec = self.cursor.fetchall()
+			if len(rec) > 0: return
+			
+			# find the info of the parent dir
+			parent_dirent = self.find_parent(path)
+			self.add_work('put', path + name, remote_parent_id = parent_dirent['id'], postwork='n')
+		
 		elif 'MOVED_TO' in event:
 			# a file or dir is moved to the repo
 			# renaming consists of two consecutive MOVE
@@ -139,18 +201,36 @@ class OneDrive_INotifyThread(threading.Thread):
 			# a file or dir is moved out of the repo
 			# including moved to trash
 			# rm
+			# check if there is a 'CLEAN' task pending on the path
+			self.cursor.execute('SELECT * FROM tasks WHERE task_type="clean" AND local_path LIKE ?', (path + name + '%',))
+			rec = self.cursor.fetchall()
+			if len(rec) > 0: return
 			pass
 		elif 'DELETE' in event:
 			# a file is unlinked (deleted)
 			# rm
 			pass
 		elif 'CREATE,ISDIR' == event:
-			# a new dir is created
-			# mkdir
-			pass
-	
+			# a new dir is created - mkdir
+			# if there is remote_mkdir updating the db, wait for it
+			SYNC_FINISH_LOCK.acquire()
+			self.cursor.execute('SELECT * FROM entries WHERE parent_path=? AND name=?', (path, name))
+			rec = self.cursor.fetchone()
+			SYNC_FINISH_LOCK.release()
+			if rec != None: return
+			# so the newly created folder does not exist remotely
+			# add a task
+			parent_dirent = self.find_parent(path)
+			self.add_work('mkdir', path + name, remote_parent_id = parent_dirent['id'])
+			
+		
+		config.log.info(str(task))
+		
 	def run(self):
 		config.log.info('start running.')
+		self.conn = sqlite3.connect(DAEMON_DB_PATH, isolation_level = None)
+		self.conn.row_factory = sqlite3.Row
+		self.cursor = self.conn.cursor()
 		subp = subprocess.Popen(self.inotify_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 		while not self.switch.is_set():
 			line = subp.stdout.readline().decode('utf-8')
@@ -162,6 +242,8 @@ class OneDrive_INotifyThread(threading.Thread):
 					self.on_task_created(row)
 		subp.terminate()
 		subprocess.call(['kill', '-9', str(subp.pid)])
+		self.cursor.close()
+		self.conn.close()
 		config.log.info('inotify shut down.')
 
 class OneDrive_SyncWorkerThread(threading.Thread):
@@ -181,16 +263,30 @@ class OneDrive_SyncWorkerThread(threading.Thread):
 		return find_entry(self.cursor, kwargs)
 	
 	def update_entry(self, entry):
-		update_entry(self.cursor, entry)
-		self.conn.commit()
+		update_entry(self.conn, entry)
 	
 	def add_notify(self, side, path, action):
-		add_notify(self.cursor, side, path, action)
-		self.conn.commit()
+		add_notify(self.conn, side, path, action)
 	
 	def remote_mkdir(self, parent_path, name, parent_id):
-		remote_mkdir(self.api, self.cursor, parent_path, name, parent_id)
+		remote_mkdir(self.api, self.conn, parent_path, name, parent_id)
 		# this implicitly calls update_entry so the changes are committed.
+	
+	def delete_tree(self, parent_path, name):
+		delete_tree(self.conn, parent_path, name)
+		self.conn.commit()
+	
+	def delete_task(self, task):
+		self.conn.execute('DELETE FROM tasks WHERE id=?', (task['id'],))
+	
+	def move_to_trash(self, path):
+		try:
+			send2trash(path)
+			parent_path, base_name = os.path.split(path)
+			self.delete_tree(parent_path + '/', base_name)
+			self.add_notify('local', path, 'moved to trash')
+		except OSError as e:
+				config.log.error('OSError {0}: {1}. Path: {2}.'.format(e.errno, e.strerr, e.filename))
 	
 	def fetch_one_task(self):
 		OneDrive_SyncWorkerThread.lock.acquire()
@@ -204,9 +300,10 @@ class OneDrive_SyncWorkerThread(threading.Thread):
 	
 	def do_postwork(self, row, updated_info = None):
 		parent_path, base_name = os.path.split(row['local_path'])
+		parent_path = parent_path + '/'
 		
 		if row['postwork'] == 'u':
-			self.cursor.execute('UPDATE entries SET status="synced" WHERE parent_path=? AND name=?', (parent_path, base_name))
+			self.conn.execute('UPDATE entries SET status="synced" WHERE parent_path=? AND name=?', (parent_path, base_name))
 		elif row['postwork'] == 'n':
 			if updated_info != None: id = updated_info['id']
 			else: id = row['remote_id']
@@ -216,18 +313,19 @@ class OneDrive_SyncWorkerThread(threading.Thread):
 			new_info['parent_path'] = parent_path
 			self.update_entry(new_info)
 		
-		if row['task_type'] == 'get':
+		if row['task_type'] in ['get', 'put']:
 			# fix mtime
 			entry = self.find_entry(parent_path = parent_path, name = base_name)
 			assert entry != None
 			t = config.str_to_timestamp(entry['client_updated_time'])
 			os.utime(row['local_path'], (t, t))
 		
+		self.delete_task(row)
 		
 	def run(self):
 		config.log.info('worker starts running.')
 		
-		self.conn = sqlite3.connect(DAEMON_DB_PATH)
+		self.conn = sqlite3.connect(DAEMON_DB_PATH, isolation_level = None)
 		self.conn.row_factory = sqlite3.Row
 		self.cursor = self.conn.cursor()
 		
@@ -272,10 +370,13 @@ class OneDrive_SyncWorkerThread(threading.Thread):
 					config.log.info('Copying remotely "' + row['local_path'] + '" to dir "' + row['remote_parent_id'] + '"')
 					self.api.mv(target_id = row['remote_id'], dest_folder_id = row['remote_parent_id'])
 					# TODO: update entries db.
-				
+				elif row['task_type'] == 'clean':
+					# move the local path to local trash.
+					# the path has been deleted remotely.
+					self.move_to_trash(row['local_path'])
 				OneDrive_SyncWorkerThread.lock.acquire()
-				self.cursor.execute('UPDATE tasks SET priority=priority-1 WHERE priority!=1')
-				self.conn.commit()
+				self.conn.execute('UPDATE tasks SET priority=priority-1 WHERE priority!=1')
+				
 				OneDrive_SyncWorkerThread.lock.release()
 				
 			#except live_api.OneDrive_Error as e:
@@ -310,17 +411,16 @@ class OneDrive_Synchronizer(threading.Thread):
 		self.empty_lock.set()
 	
 	def remote_mkdir(self, parent_path, name, parent_id):
-		remote_mkdir(self.api, self.cursor, parent_path, name, parent_id)
-		self.enqueue(parent_path + name + '/', new_dir_info['id'])
+		nd = remote_mkdir(self.api, self.conn, parent_path, name, parent_id)
+		self.enqueue(parent_path + name + '/', nd['id'])
 	
 	def add_work(self, type, path, remote_id = '', remote_parent_id = '', priority = 1, postwork = 'u'):
-		add_work(self.cursor, type, path, remote_id, remote_parent_id, priority, postwork)
+		add_work(self.conn, type, path, remote_id, remote_parent_id, priority, postwork)
 		self.pending_work_count += 1
-		self.conn.commit()
 	
 	def add_notify(self, side, path, action):
-		add_notify(self.cursor, side, path, action)
-		self.conn.commit()
+		add_notify(self.conn, side, path, action)
+		
 		# there is little value to have this notification displayed immediately
 		# so do not tell daemon to notify observers
 	
@@ -328,8 +428,10 @@ class OneDrive_Synchronizer(threading.Thread):
 		return find_entry(self.cursor, kwargs)
 	
 	def update_entry(self, entry):
-		update_entry(self.cursor, entry)
-		self.conn.commit()
+		update_entry(self.conn, entry)
+	
+	def update_status(self, status, **kwargs):
+		update_status(self.conn, status, kwargs)
 	
 	def merge_dir(self, entry):
 		'''
@@ -446,15 +548,18 @@ class OneDrive_Synchronizer(threading.Thread):
 		
 		# process untouched local items
 		for name in all_local_items:
-			if is_ignorable(name): pass
+			if is_ignorable(name): continue
+			
 			entry_record = self.find_entry(parent_path = local_path, name = name)
+			
 			if entry_record != None:
+				# the entry exists physically and in db, but not touched remotely
+				# then the file is probably deleted remotely
 				config.log.debug('The entry "' + local_path + name + '" may have been deleted remotely but not reflected locally.')
-				
+				self.add_work('clean', local_path + name, postwork = 'd')
 			elif os.path.isdir(local_path + name):
 				config.log.debug('Local dir "' + local_path + name + '" does not exist remotely. Create it.')
-				
-				self.remote_mkdir(local_path, item, remote_path)
+				self.remote_mkdir(local_path, name, remote_path)
 			else:
 				config.log.debug('Local file "' + local_path + name + '" does not exist remotely. Upload it.')
 				self.add_work('put', local_path + name, remote_parent_id = remote_path, postwork = 'n')
@@ -476,7 +581,7 @@ class OneDrive_Synchronizer(threading.Thread):
 	
 	def run(self):
 		config.log.info('syncer starts running')
-		self.conn = sqlite3.connect(DAEMON_DB_PATH)
+		self.conn = sqlite3.connect(DAEMON_DB_PATH, isolation_level = None)
 		self.conn.row_factory = sqlite3.Row
 		self.cursor = self.conn.cursor()
 		
@@ -525,7 +630,7 @@ class OneDrive_DaemonThread(threading.Thread):
 	def run(self):
 		config.log.debug('start running.')
 		
-		self.conn = sqlite3.connect(DAEMON_DB_PATH)
+		self.conn = sqlite3.connect(DAEMON_DB_PATH, isolation_level = None)
 		self.cursor = self.conn.cursor()
 		self.cursor.execute('''
 			CREATE TABLE IF NOT EXISTS entries 

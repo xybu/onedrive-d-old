@@ -54,7 +54,7 @@ def touch(path, data):
 	if not os.path.isdir(os.path.dirname(path)):
 		mkdir(os.path.dirname(path))
 	with open(path, 'wb') as f:
-		f.write(data)
+		f.write(bytes(data, 'utf-8'))
 	uid = getpwnam(OS_LOCAL_USER).pw_uid
 	os.chown(path, uid, -1)
 
