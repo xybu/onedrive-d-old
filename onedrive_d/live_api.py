@@ -199,6 +199,7 @@ class OneDrive_API:
 		return self.list_entries(user_id + '/skydrive', 'shared')
 	
 	def mkdir(self, folder_name, parent_id = 'me/skydrive'):
+		if parent_id == '/': parent_id = 'me/skydrive'	# fix parent_id alias
 		data = {'name': folder_name}
 		headers = {
 			'Content-Type': 'application/json',
@@ -221,7 +222,7 @@ class OneDrive_API:
 			'Content-Type': 'application/json',
 			'Authorization': 'Bearer ' + self.access_token
 		}
-		uri = OneDrive_API.API_URI + target_id + '?overwrite=' + overwrite
+		uri = OneDrive_API.API_URI + target_id + '?overwrite=' + str(overwrite)
 		req = requests.Request(type, uri, data=json.dumps(data), headers=headers).prepare()
 		try:
 			r = self.http_client.send(req)

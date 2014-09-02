@@ -7,7 +7,7 @@ import threading
 import live_api
 import logger
 
-DAEMON_PULL_INTERVAL = 60
+DAEMON_PULL_INTERVAL = 90
 
 '''
 The daemon should implement the following functions:
