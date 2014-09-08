@@ -3,20 +3,21 @@
 A Microsoft OneDrive client on Linux desktop environment, written in Py3k.
 
 **NOTE: VERSION 0.85 IS DEPRECATED**
+
 **NOTE: VERSION 1.0 IS STILL IN DEVELOPMENT**
 
 ## Introduction
 
-The branch `1.0-dev` will be rewritten, thereby finishing the features
-that are unable or itchy to implement in old releases.
+The branch `1.0-dev` is totally rewritten in Py3k, thereby finishing the features
+that are unable or itchy to implement in previous, experimental versions.
 
 ### TODO Lists
 
- - [ ] A simple and light-weight Live Connect API written in Py3k
+ - [X] A simple and light-weight Live Connect API written in Py3k
  - [X] Support both GUI and command-line interfaces
  	 - [X] Command-line preference dialog
  	 - [ ] Gtk preference Dialog
- 	 - [ ] Command-line observer
+ 	 - [X] Command-line observer (no-observer mode)
  	 - [ ] Gtk observer
  - [X] Easily customizable ignore list
  - [ ] Installation scripts
