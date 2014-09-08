@@ -2,6 +2,8 @@
 
 A Microsoft OneDrive client on Linux desktop environment, written in Py3k.
 
+*NOTE: VERSION 1.0 IS STILL IN DEVELOPMENT*
+
 ## Introduction
 
 The branch `1.0-dev` will be rewritten, thereby finishing the features
@@ -20,7 +22,7 @@ that are unable or itchy to implement in old releases.
 
 ## Installation
 
-Run command `./setup.sh` (planned)
+Run command `./setup.sh inst` (planned)
 
 ## Uninstallation
 
