@@ -18,7 +18,7 @@ do_clean() {
 }
 
 case $DISTRIB_ID in
-	debian|ubuntu)
+	debian|ubuntu|linuxmint)
 		PYGOBJECT_PKG_NAME='python3-gi'
 		GIT_PKG_NAME='git'
 		INOTIFY_PKG_NAME='inotify-tools'
