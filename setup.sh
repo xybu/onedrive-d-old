@@ -6,7 +6,9 @@
 # 
 # @author	Xiangyu Bu <xybu92@live.com>
 
-DISTRIB_ID=`cat /etc/lsb-release | grep 'DISTRIB_ID=' | cut -d '=' -f2`
+# Workaround to support more distros
+LSB_RELEASE_BIN=`whereis lsb-release | cut -d ' ' -f2`
+DISTRIB_ID=`cat $LSB_RELEASE_BIN | grep 'DISTRIB_ID=' | cut -d '=' -f2`
 DISTRIB_ID=${DISTRIB_ID,,}
 
 test_cmd() {
@@ -18,7 +20,8 @@ do_clean() {
 }
 
 case $DISTRIB_ID in
-	debian|ubuntu|linuxmint)
+	# Debian/Ubuntu family
+	debian|ubuntu|linuxmint|"elementary os")
 		PYGOBJECT_PKG_NAME='python3-gi'
 		GIT_PKG_NAME='git'
 		INOTIFY_PKG_NAME='inotify-tools'
@@ -49,10 +52,12 @@ case $1 in
 		cp default/ignore_list.txt ~/.onedrive/ignore_list.txt
 		echo ""
 		echo "Please issue command 'onedrive-pref [--no-gui]' to configure the app,"
-		echo "and then issue command 'onedrive-d [--no-gui]' to start the daemon."
+		echo "and then issue command 'onedrive-d' to start the daemon."
 		;;
 	remove)
+		echo "Removing Python 2 version of onedrive_d, if any."
 		sudo pip uninstall onedrive_d
+		echo "Removing Python 3 version of onedrive_d."
 		sudo pip3 uninstall onedrive_d
 		echo ""
 		echo "onedrive_d has been removed from the system."
