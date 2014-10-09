@@ -22,7 +22,7 @@ An observer should implement the following functions:
 '''
 
 def print_help():
-	print('Usage: onedrive-d [--ui=gtk|dummy] [--help] [--no-prompt]')
+	print('Usage: onedrive-d [--ui=gtk] [--help] [--no-prompt]')
 	print('	--ui: specify the UI component. Support "gtk". ')
 	print('	      If not given, start daemon without UI.')
 	print('	--help: print the usage information')
