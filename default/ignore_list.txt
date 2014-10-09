@@ -1,26 +1,14 @@
 // exclude files outside NTFS namespaces
 *[<>?*:"|]*
 
+// exclude any hidden file
+.*
+
 // exclude temporary files
 *~
-.lock
-.netrwhist
-.directory
 Session.vim
 *.swp
 *._swp
 #*#
-.emacs.desktop*
 *.elc
-.#*
-.org-id-locations
 *_flymake.*
-.DS_Store
-.AppleDouble
-.LSOverride
-._*
-.Spotlight-V100
-.Trashes
-
-// exclude any hidden file
-.*
