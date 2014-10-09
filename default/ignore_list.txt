@@ -21,3 +21,6 @@ Session.vim
 ._*
 .Spotlight-V100
 .Trashes
+
+// exclude any hidden file
+.*
