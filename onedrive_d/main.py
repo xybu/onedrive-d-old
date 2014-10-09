@@ -86,9 +86,6 @@ def main():
 	if ui_component == 'gtk':
 		from observer_gtk import OneDrive_Observer
 		observer_thread = OneDrive_Observer()
-	elif ui_component == 'dummy':
-		from observer_dummy import OneDrive_Observer
-		observer_thread = OneDrive_Observer()
 	elif ui_component != '':
 		print('The UI component "' + ui_component + '" is not found. Exit.')
 		sys.exit(1)
