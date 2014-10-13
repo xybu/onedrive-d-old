@@ -3,12 +3,25 @@
 # Setup script for onedrive-d
 # Usage:
 # ./setup.sh [inst|remove]
-# 
+#
 # @author	Xiangyu Bu <xybu92@live.com>
 
+set -e
+set -u
+
 # Workaround to support more distros
-LSB_RELEASE_BIN=`whereis lsb-release | cut -d ' ' -f2`
-DISTRIB_ID=`cat $LSB_RELEASE_BIN | grep 'DISTRIB_ID=' | cut -d '=' -f2`
+LSB_RELEASE_BIN=$(whereis lsb-release | cut -d' ' -f2)
+OS_RELEASE_BIN=$(whereis os-release | cut -d' ' -f2)
+
+if [ -f "$LSB_RELEASE_BIN" ] ; then
+	DISTRIB_ID=$(grep 'DISTRIB_ID=' $LSB_RELEASE_BIN | cut -d'=' -f2)
+elif [ -f "$OS_RELEASE_BIN" ] ; then
+	DISTRIB_ID=$(grep 'ID=' $OS_RELEASE_BIN | cut -d'=' -f2)
+else
+	echo "Could not determine your OS, aborting..."
+	exit 1
+fi
+
 DISTRIB_ID=${DISTRIB_ID,,}
 
 test_cmd() {
@@ -17,6 +30,13 @@ test_cmd() {
 
 do_clean() {
 	sudo rm -rf temp onedrive_d/temp build onedrive_d/build dist onedrive_d/dist *.egg-info onedrive_d/*.egg-info setup.cfg onedrive_d/setup.cfg onedrive_d/__pycache__
+}
+
+usage() {
+	echo "Usage ./setup.sh [inst|remove]"
+	echo "	inst: install onedrive-d"
+	echo "	remove: uninstall onedrive-d from the system"
+	exit 1
 }
 
 case $DISTRIB_ID in
@@ -35,11 +55,22 @@ case $DISTRIB_ID in
 		SETUPTOOL_PKG_NAME='python3-pip'
 		INSTALL_CMD='sudo yum install'
 		;;
+	arch)
+		PYGOBJECT_PKG_NAME='python-gobject'
+		GIT_PKG_NAME='git'
+		INOTIFY_PKG_NAME='inotify-tools'
+		SETUPTOOL_PKG_NAME='python-pip'
+		INSTALL_CMD='sudo pacman -S'
+		;;
 	*)
 		echo "This setup script does not support your distro $DISTRIB_ID."
 		exit 1
 		;;
 esac
+
+if [ "$#" -ne 1 ] ; then
+    usage
+fi
 
 case $1 in
 	inst)
@@ -63,10 +94,7 @@ case $1 in
 		echo "onedrive_d has been removed from the system."
 		;;
 	*)
-		echo "Usage ./setup.sh [inst|remove]"
-		echo "	inst: install onedrive-d"
-		echo "	remove: uninstall onedrive-d from the system"
-		exit 1
+		usage
 		;;
 esac
 
