@@ -456,6 +456,7 @@ class OneDrive_SyncWorkerThread(threading.Thread):
 			except live_api.AuthError as e:
 				config.log.error(e.__class__.__name__ + ': ' + str(e))
 				app_tokens = self.api.refresh_token(config.APP_CONFIG['token']['refresh_token'])
+				self.api.set_access_token(app_tokens['access_token'])
 				config.save_token(app_tokens)
 				config.save_config()
 				self.reset_task(row)
@@ -695,6 +696,7 @@ class OneDrive_Synchronizer(threading.Thread):
 				except live_api.AuthError as e:
 					config.log.error(e.__class__.__name__ + ': ' + str(e))
 					app_tokens = self.api.refresh_token(config.APP_CONFIG['token']['refresh_token'])
+					self.api.set_access_token(app_tokens['access_token'])
 					config.save_token(app_tokens)
 					config.save_config()
 					self.enqueue(entry[0], entry[1])
