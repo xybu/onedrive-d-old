@@ -76,6 +76,9 @@ case $1 in
 	inst)
 		do_clean
 		$INSTALL_CMD $GIT_PKG_NAME $SETUPTOOL_PKG_NAME $PYGOBJECT_PKG_NAME $INOTIFY_PKG_NAME
+		# Add X attrib just in case
+		chmod +x onedrive_d/main.py
+		chmod +x onedrive_d/pref.py
 		sudo python3 onedrive_d/setup.py install
 		sudo python3 onedrive_d/setup.py clean
 		do_clean
