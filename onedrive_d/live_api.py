@@ -61,7 +61,10 @@ class OneDrive_API:
 	def parse_response(self, request, error, ok_status = requests.codes.ok):
 		ret = request.json()
 		if request.status_code != ok_status:
-			raise error(ret)
+			if 'code' in ret['error'] and ret['error']['code'] == 'request_token_expired':
+				raise AuthError(ret)
+			else:
+				raise error(ret)
 		return ret
 	
 	def get_auth_uri(self, display = 'touch', locale = 'en', state = ''):
@@ -275,7 +278,8 @@ class OneDrive_API:
 			r = self.http_client.put(uri, data = data)
 			ret = r.json()
 			if r.status_code != requests.codes.ok and r.status_code != requests.codes.created:
-				raise ProtocolError(ret)
+				if 'request_token_expired' in ret: raise AuthError(ret)
+				else: raise ProtocolError(ret)
 			return ret
 		except requests.exceptions.ConnectionError as e:
 			raise NetworkError(e)
@@ -283,7 +287,9 @@ class OneDrive_API:
 	def get(self, entry_id, local_path = None):
 		try:
 			r = self.http_client.get(OneDrive_API.API_URI + entry_id + '/content')
-			if r.status_code != requests.codes.ok: raise ProtocolError(request.json())
+			if r.status_code != requests.codes.ok:
+				if 'request_token_expired' in ret: raise AuthError(request.json())
+				else: raise ProtocolError(request.json())
 			if local_path != None:
 				with open(local_path, 'wb') as f:
 					f.write(r.content)

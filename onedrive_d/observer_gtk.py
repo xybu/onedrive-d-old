@@ -6,6 +6,7 @@ shows notification messages.
 '''
 
 import os
+import time
 import subprocess
 import threading
 import config
@@ -13,7 +14,15 @@ from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Gtk, GdkPixbuf
 
-TRAYICON_UPDATE_INTERVAL = 20 # in seconds
+TRAYICON_UPDATE_INTERVAL = 2 # in seconds
+RESOURCE_PATH = os.path.dirname(os.path.abspath(__file__))
+
+class OneDrive_GtkWorker(threading.Thread):
+	def __init__(self):
+		super().__init__()
+	
+	def run(self):
+		pass
 
 class OneDrive_Observer(Gtk.StatusIcon):
 	
@@ -22,8 +31,9 @@ class OneDrive_Observer(Gtk.StatusIcon):
 		self.name = 'gtk'
 		self.connect("activate", self.on_activate)
 		self.connect("popup-menu", self.on_popup_menu)
-		self.icon_pixbuf = GdkPixbuf.Pixbuf.new_from_file(os.path.dirname(__file__) + "/res/icon_256.png")
-		self.set_from_pixbuf(self.icon_pixbuf)
+		self.icon_busy = GdkPixbuf.Pixbuf.new_from_file(RESOURCE_PATH + "/res/icon_256.png")
+		self.icon_idle = GdkPixbuf.Pixbuf.new_from_file(RESOURCE_PATH + "/res/icon_256_idle.png")
+		self.set_from_pixbuf(self.icon_idle)
 		self.set_visible(True)
 	
 	def notify(self):
@@ -61,9 +71,14 @@ class OneDrive_Observer(Gtk.StatusIcon):
 		open_new("https://onedrive.com")
 	
 	def update(self):
+		self.set_from_pixbuf(self.icon_busy)
+		# self.set_visible(True)
 		while Gtk.events_pending():
 			Gtk.main_iteration()
+		time.sleep(1)
 		config.log.debug('StatusIcon updated once.')
+		self.set_from_pixbuf(self.icon_idle)
+		# self.set_visible(True)
 		return True
 	
 	def run(self):
@@ -72,3 +87,5 @@ class OneDrive_Observer(Gtk.StatusIcon):
 	
 	def stop(self, widget = None):
 		Gtk.main_quit()
+
+OneDrive_Observer().run()

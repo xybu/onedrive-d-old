@@ -16,6 +16,8 @@ import live_api
 from send2trash import send2trash
 
 MAX_WORKER_NUM = 2
+WORKER_EVENT_INTERVAL = 1
+NETWORKERR_WAIT_INTERVAL = 60
 DAEMON_DB_PATH = config.APP_CONFIG_PATH + '/onedrive.sqlite'
 SYNC_FINISH_LOCK = threading.RLock()
 WORKER_IDLE_EVENT = threading.Event()
@@ -339,6 +341,12 @@ class OneDrive_SyncWorkerThread(threading.Thread):
 		OneDrive_SyncWorkerThread.lock.release()
 		return row
 	
+	def reset_task(self, task):
+		OneDrive_SyncWorkerThread.lock.acquire()
+		self.cursor.execute('UPDATE tasks SET priority=1 WHERE id=?', (row['id'],))
+		self.conn.commit()
+		OneDrive_SyncWorkerThread.lock.release()
+	
 	def do_postwork(self, row, updated_info = None):
 		parent_path, base_name = os.path.split(row['local_path'])
 		parent_path = parent_path + '/'
@@ -442,9 +450,19 @@ class OneDrive_SyncWorkerThread(threading.Thread):
 					self.move_to_trash(row['local_path'])
 					self.add_notify('local', row['local_path'], 'moved to trash')
 					self.delete_task(row)
+			
+				time.sleep(WORKER_EVENT_INTERVAL)
 				
-				
-				
+			except live_api.AuthError as e:
+				config.log.error(e.__class__.__name__ + ': ' + str(e))
+				app_tokens = self.api.refresh_token(config.APP_CONFIG['token']['refresh_token'])
+				config.save_token(app_tokens)
+				config.save_config()
+				self.reset_task(row)
+			except live_api.NetworkError:
+				config.log.error('Network error. Wait for {} seconds.'.format(NETWORKERR_WAIT_INTERVAL))
+				time.sleep(NETWORKERR_WAIT_INTERVAL)
+				self.reset_task(row)
 			#except live_api.OneDrive_Error as e:
 			#	config.log.error(e.__class__.__name__ + ': ' + str(e))
 			except OSError as e:
@@ -671,7 +689,20 @@ class OneDrive_Synchronizer(threading.Thread):
 			
 			while not self.switch.is_set() and not self.queue.empty():
 				entry = self.queue.get()
-				self.merge_dir(entry)
+				
+				try:
+					self.merge_dir(entry)
+				except live_api.AuthError as e:
+					config.log.error(e.__class__.__name__ + ': ' + str(e))
+					app_tokens = self.api.refresh_token(config.APP_CONFIG['token']['refresh_token'])
+					config.save_token(app_tokens)
+					config.save_config()
+					self.enqueue(entry[0], entry[1])
+				except live_api.NetworkError:
+					config.log.error('Network error. Wait for {} seconds.'.format(NETWORKERR_WAIT_INTERVAL))
+					time.sleep(NETWORKERR_WAIT_INTERVAL)
+					self.enqueue(entry)
+				
 				self.queue.task_done()
 			self.empty_lock.clear()
 			config.log.debug('queue is now empty.')
