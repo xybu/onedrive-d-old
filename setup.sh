@@ -16,7 +16,7 @@ OS_RELEASE_BIN=$(whereis os-release | cut -d' ' -f2)
 if [ -f "$LSB_RELEASE_BIN" ] ; then
 	DISTRIB_ID=$(grep 'DISTRIB_ID=' $LSB_RELEASE_BIN | cut -d'=' -f2)
 elif [ -f "$OS_RELEASE_BIN" ] ; then
-	DISTRIB_ID=$(grep 'ID=' $OS_RELEASE_BIN | cut -d'=' -f2)
+	DISTRIB_ID=$(grep '^ID=' $OS_RELEASE_BIN | cut -d'=' -f2)
 else
 	echo "Could not determine your OS, aborting..."
 	exit 1
