@@ -60,7 +60,7 @@ case $DISTRIB_ID in
 		GIT_PKG_NAME='git'
 		INOTIFY_PKG_NAME='inotify-tools'
 		SETUPTOOL_PKG_NAME='python-pip'
-		INSTALL_CMD='sudo pacman -S'
+		INSTALL_CMD='sudo pacman -S --needed'
 		;;
 	*)
 		echo "This setup script does not support your distro $DISTRIB_ID."
