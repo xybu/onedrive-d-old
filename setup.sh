@@ -55,7 +55,7 @@ case $DISTRIB_ID in
 		SETUPTOOL_PKG_NAME='python3-pip'
 		INSTALL_CMD='sudo yum install'
 		;;
-	arch)
+	arch|archarm)
 		PYGOBJECT_PKG_NAME='python-gobject'
 		GIT_PKG_NAME='git'
 		INOTIFY_PKG_NAME='inotify-tools'
