@@ -290,7 +290,7 @@ class OneDrive_API:
 		try:
 			r = self.http_client.get(OneDrive_API.API_URI + entry_id + '/content')
 			if r.status_code != requests.codes.ok:
-				ret = request.json()
+				ret = r.json()
 				# TODO: try testing this
 				if 'error' in ret and 'code' in ret['error'] and ret['error']['code'] == 'request_token_expired': 
 					raise AuthError(ret)
