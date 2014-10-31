@@ -343,7 +343,7 @@ class OneDrive_SyncWorkerThread(threading.Thread):
 	
 	def reset_task(self, task):
 		OneDrive_SyncWorkerThread.lock.acquire()
-		self.cursor.execute('UPDATE tasks SET priority=1 WHERE id=?', (row['id'],))
+		self.cursor.execute('UPDATE tasks SET priority=1 WHERE id=?', (task['id'],))
 		self.conn.commit()
 		OneDrive_SyncWorkerThread.lock.release()
 	
