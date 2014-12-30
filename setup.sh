@@ -62,6 +62,12 @@ case $DISTRIB_ID in
 		SETUPTOOL_PKG_NAME='python-pip'
 		INSTALL_CMD='sudo pacman -S --needed'
 		;;
+	opensuse)
+		PYGOBJECT_PKG_NAME='python-gobject'
+		GIT_PKG_NAME='git'
+		INOTIFY_PKG_NAME='python3-pyinotify'
+		SETUPTOOL_PKG_NAME='python3-pip'
+		INSTALL_CMD='sudo zypper install'
 	*)
 		echo "This setup script does not support your distro $DISTRIB_ID."
 		exit 1
