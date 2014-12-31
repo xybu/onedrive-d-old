@@ -68,6 +68,7 @@ case $DISTRIB_ID in
 		INOTIFY_PKG_NAME='python3-pyinotify'
 		SETUPTOOL_PKG_NAME='python3-pip'
 		INSTALL_CMD='sudo zypper install'
+		;;
 	*)
 		echo "This setup script does not support your distro $DISTRIB_ID."
 		exit 1
