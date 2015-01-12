@@ -14,6 +14,15 @@ Notes:
 
 import sys
 
+def print_usage():
+	print('Usage: ' + sys.argv[0] + ' [--ui=cli|gtk] [--help]')
+	print('''Arguments:
+	--ui: specify the user interface. 
+	      "cli" for command-line interface (default when not given)
+	      "gtk" for GUI interface.
+	--help: print usage information.
+''')
+
 def main():
 	pref_guide = None
 	
@@ -29,6 +38,9 @@ def main():
 			else:
 				print('Error: unknown parameter "' + arg + '"')
 				sys.exit(1)
+		elif arg.lower() == '--help':
+			print_usage()
+			sys.exit(0)
 	
 	if pref_guide == None:
 		from od_pref_cli import PreferenceGuide

@@ -33,3 +33,12 @@ cd onedrive-d
 ## Removal
 
 Refer to step 1 of section "Installation".
+
+## Multi-Threading
+
+The jobs of threads of main program are planned as follows:
+
+ * `MainThread`: if GUI is enabled, for GUI responsiveness; 
+   for CLI case, used for heart-beating.
+ * `thread_manager`: checking network condition if any other threads are put to sleep
+   under its queue, and when network _seems_ fine wake up the threads; blocked otherwise.
