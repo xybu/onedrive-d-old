@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
 import os
 from setuptools import setup, find_packages
 
 try:
-	readme = open(os.path.join(os.path.dirname(__file__), 'README.md')).read()
+	readme = open(os.path.join(os.path.dirname(__file__), '/../README.md')).read()
 except IOError:
 	readme = 'Please read README.md for more details'
 
@@ -14,9 +14,9 @@ setup(
 	author='Xiangyu Bu',
 	author_email='xybu92@live.com',
 	license='GPLv3',
-	keywords=[ 'skydrive', 'onedrive', 'microsoft', 'daemon', 'live', 'liveconnect',
-		'cloud', 'storage', 'storage provider', 'file hosting'],
-	url='http://github.com/xybu92/onedrive-d',
+	keywords=['onedrive', 'microsoft', 'daemon', 'live', 'liveconnect',
+		'cloud', 'storage', 'storage provider', 'file hosting', 'skydrive'],
+	url='http://github.com/xybu/onedrive-d',
 	description='A Microsoft OneDrive client for Debian/Ubuntu desktop.',
 	long_description=readme,
 	classifiers=[
