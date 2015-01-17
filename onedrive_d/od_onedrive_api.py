@@ -73,8 +73,8 @@ class OneDriveAPI:
 	FOLDER_TYPES = ['folder', 'album']
 	
 	def __init__(self, client_id, client_secret, client_scope = CLIENT_SCOPE, redirect_uri = REDIRECT_URI):
-		self.access_token = None
-		self.refresh_token = None
+		self.client_access_token = None
+		self.client_refresh_token = None
 		self.client_id = client_id
 		self.client_secret = client_secret
 		self.client_scope = client_scope
@@ -92,8 +92,8 @@ class OneDriveAPI:
 		return ret
 	
 	def auto_recover_auth_error(self):
-		if self.refresh_token == None: raise OneDriveAuthError()
-		refreshed_token_set = self.refresh_token(self.refresh_token)
+		if self.client_refresh_token == None: raise OneDriveAuthError()
+		refreshed_token_set = self.refresh_token(self.client_refresh_token)
 		od_glob.get_config_instance().set_access_token(refreshed_token_set)
 	
 	def get_auth_uri(self, display = 'touch', locale = 'en', state = ''):
@@ -118,11 +118,11 @@ class OneDriveAPI:
 		return self.access_token != None
 	
 	def set_access_token(self, token):
-		self.access_token = token
-		self.http_client.headers.update({'Authorization': 'Bearer ' + self.access_token})
+		self.client_access_token = token
+		self.http_client.headers.update({'Authorization': 'Bearer ' + token})
 	
 	def set_refresh_token(self, token):
-		self.refresh_token = token
+		self.client_refresh_token = token
 	
 	def get_access_token(self, code = None, uri = None):
 		'''
@@ -164,43 +164,41 @@ class OneDriveAPI:
 			"refresh_token": token,
 			"grant_type": 'refresh_token'
 		}
-		try:
-			request = requests.post(OneDriveAPI.OAUTH_TOKEN_URI, data = params)
-			response = self.parse_response(request, OneDriveAPIException)
-			self.set_access_token(response['access_token'])
-			self.set_refresh_token(response['refresh_token'])
-			return response
-		except requests.exceptions.ConnectionError:
-			self.logger.info('network connection error.')
-			self.threadman.hang_caller()
-			return self.refresh_token(token)
+		while True:
+			try:
+				request = requests.post(OneDriveAPI.OAUTH_TOKEN_URI, data = params)
+				response = self.parse_response(request, OneDriveAPIException)
+				self.set_access_token(response['access_token'])
+				self.set_refresh_token(response['refresh_token'])
+				return response
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
 	
 	def sign_out(self):
-		try:
-			r = self.http_client.get(OneDriveAPI.OAUTH_SIGNOUT_URI + '?client_id=' + self.client_id + '&redirect_uri=' + self.client_redirect_uri)
-			return self.parse_response(r, OneDriveAuthError)
-		except OneDriveAuthError:
-			self.auto_recover_auth_error()
-			return self.sign_out()
-		except requests.exceptions.ConnectionError:
-			self.logger.info('network connection error.')
-			self.threadman.hang_caller()
-			return self.sign_out()
+		while True:
+			try:
+				r = self.http_client.get(OneDriveAPI.OAUTH_SIGNOUT_URI + '?client_id=' + self.client_id + '&redirect_uri=' + self.client_redirect_uri)
+				return self.parse_response(r, OneDriveAuthError)
+			except OneDriveAuthError:
+				self.auto_recover_auth_error()
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
 	
 	def get_recent_docs(self):
 		raise NotImplementedError('get_recent_docs is not implemented.')
 	
 	def get_quota(self, user_id = 'me'):
-		try:
-			r = self.http_client.get(OneDriveAPI.API_URI + user_id + '/skydrive/quota')
-			return self.parse_response(r, OneDriveAPIException)
-		except OneDriveAuthError:
-			self.auto_recover_auth_error()
-			return self.get_quota(user_id)
-		except requests.exceptions.ConnectionError:
-			self.logger.info('network connection error.')
-			self.threadman.hang_caller()
-			return self.get_quota(user_id)
+		while True:
+			try:
+				r = self.http_client.get(OneDriveAPI.API_URI + user_id + '/skydrive/quota')
+				return self.parse_response(r, OneDriveAPIException)
+			except OneDriveAuthError:
+				self.auto_recover_auth_error()
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
 	
 	def get_root_entry_name(self):
 		return 'me/skydrive'
@@ -227,16 +225,15 @@ class OneDriveAPI:
 		headers = {
 			'Content-Type': 'application/json',
 		}
-		try:
-			r = self.http_client.put(OneDriveAPI.API_URI + entry_id, data = json.dumps(kwargs), headers = headers)
-			return self.parse_response(r, OneDriveAPIException)
-		except OneDriveAuthError:
-			self.auto_recover_auth_error()
-			return self.set_property(entry_id, kwargs)
-		except requests.exceptions.ConnectionError:
-			self.logger.info('network connection error.')
-			self.threadman.hang_caller()
-			return self.set_property(entry_id, kwargs)
+		while True:
+			try:
+				r = self.http_client.put(OneDriveAPI.API_URI + entry_id, data = json.dumps(kwargs), headers = headers)
+				return self.parse_response(r, OneDriveAPIException)
+			except OneDriveAuthError:
+				self.auto_recover_auth_error()
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
 	
 	def get_link(self, entry_id, type = 'r'):
 		'''
@@ -247,31 +244,29 @@ class OneDriveAPI:
 		elif type == 'rw': type = 'shared_edit_link'
 		else: type = 'embed'
 		
-		try:
-			r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/' + type)
-			return self.parse_response(r, OneDriveAPIException)['source']
-		except OneDriveAuthError:
-			self.auto_recover_auth_error()
-			return self.get_link(entry_id, type)
-		except requests.exceptions.ConnectionError:
-			self.logger.info('network connection error.')
-			self.threadman.hang_caller()
-			return self.get_link(entry_id, type)
+		while True:
+			try:
+				r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/' + type)
+				return self.parse_response(r, OneDriveAPIException)['source']
+			except OneDriveAuthError:
+				self.auto_recover_auth_error()
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
 	
 	def list_entries(self, folder_id = 'me/skydrive', type = 'files'):
 		'''
 		@param type: 'files' (default) for all files. 'shared' for shared files (used internally).
 		'''
-		try:
-			r = self.http_client.get(OneDriveAPI.API_URI + folder_id + '/' + type)
-			return self.parse_response(r, OneDriveAPIException)['data']
-		except OneDriveAuthError:
-			self.auto_recover_auth_error()
-			return self.list_entries(folder_id, type)
-		except requests.exceptions.ConnectionError:
-			self.logger.info('network connection error.')
-			self.threadman.hang_caller()
-			return self.list_entries(folder_id, type)
+		while True:
+			try:
+				r = self.http_client.get(OneDriveAPI.API_URI + folder_id + '/' + type)
+				return self.parse_response(r, OneDriveAPIException)['data']
+			except OneDriveAuthError:
+				self.auto_recover_auth_error()
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
 	
 	def list_shared_entries(self, user_id = 'me'):	
 		return self.list_entries(user_id + '/skydrive', 'shared')
@@ -281,16 +276,15 @@ class OneDriveAPI:
 		data = {'name': folder_name}
 		headers = {'Content-Type': 'application/json'}
 		uri = OneDriveAPI.API_URI + parent_id
-		try:
-			r = self.http_client.post(uri, data = json.dumps(data), headers = headers)
-			return self.parse_response(r, OneDriveAPIException, requests.codes.created)
-		except OneDriveAuthError:
-			self.auto_recover_auth_error()
-			return self.mkdir(folder_name, parent_id)
-		except requests.exceptions.ConnectionError:
-			self.logger.info('network connection error.')
-			self.threadman.hang_caller()
-			return self.mkdir(folder_name, parent_id)
+		while True:
+			try:
+				r = self.http_client.post(uri, data = json.dumps(data), headers = headers)
+				return self.parse_response(r, OneDriveAPIException, requests.codes.created)
+			except OneDriveAuthError:
+				self.auto_recover_auth_error()
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
 	
 	def cp(self, target_id, dest_folder_id, overwrite = True, type = 'COPY'):
 		'''
@@ -301,20 +295,19 @@ class OneDriveAPI:
 		data = {'destination': dest_folder_id}
 		headers = {
 			'Content-Type': 'application/json',
-			'Authorization': 'Bearer ' + self.access_token
+			'Authorization': 'Bearer ' + self.client_access_token
 		}
 		uri = OneDriveAPI.API_URI + target_id + '?overwrite=' + str(overwrite)
 		req = requests.Request(type, uri, data=json.dumps(data), headers=headers).prepare()
-		try:
-			r = self.http_client.send(req)
-			return self.parse_response(r, OneDriveAPIException, requests.codes.created)
-		except OneDriveAuthError:
-			self.auto_recover_auth_error()
-			return self.cp(target_id, dest_folder_id, overwrite, type)
-		except requests.exceptions.ConnectionError:
-			self.logger.info('network connection error.')
-			self.threadman.hang_caller()
-			return self.cp(target_id, dest_folder_id, overwrite, type)
+		while True:
+			try:
+				r = self.http_client.send(req)
+				return self.parse_response(r, OneDriveAPIException, requests.codes.created)
+			except OneDriveAuthError:
+				self.auto_recover_auth_error()
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
 	
 	def mv(self, target_id, dest_folder_id, overwrite = True):
 		return self.cp(target_id, dest_folder_id, overwrite, 'MOVE')
@@ -360,75 +353,72 @@ class OneDriveAPI:
 		else:
 			raise OneDriveValueError({'error': 'upload_null_content', 'error_description': 'local_path and data cannot both be null.'})
 		
-		try:
-			r = self.http_client.put(uri, data = data)
-			ret = r.json()
-			if r.status_code != requests.codes.ok and r.status_code != requests.codes.created:
-				# TODO: try testing this
-				if 'error' in ret and 'code' in ret['error'] and ret['error']['code'] == 'request_token_expired': 
-					raise OneDriveAuthError(ret)
-				else: raise OneDriveAPIException(ret)
-			return ret
-		except OneDriveAuthError:
-			self.auto_recover_auth_error()
-			return self.put(name, folder_id, upload_location, local_path, data, overwrite)
-		except requests.exceptions.ConnectionError:
-			self.logger.info('network connection error.')
-			self.threadman.hang_caller()
-			return self.put(name, folder_id, upload_location, local_path, data, overwrite)
+		while True:
+			try:
+				r = self.http_client.put(uri, data = data)
+				ret = r.json()
+				if r.status_code != requests.codes.ok and r.status_code != requests.codes.created:
+					# TODO: try testing this
+					if 'error' in ret and 'code' in ret['error'] and ret['error']['code'] == 'request_token_expired': 
+						raise OneDriveAuthError(ret)
+					else: raise OneDriveAPIException(ret)
+				return ret
+			except OneDriveAuthError:
+				self.auto_recover_auth_error()
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
 		
 	def get(self, entry_id, local_path = None):
-		try:
-			r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/content')
-			if r.status_code != requests.codes.ok:
-				ret = r.json()
-				# TODO: try testing this
-				if 'error' in ret and 'code' in ret['error'] and ret['error']['code'] == 'request_token_expired': 
-					raise OneDriveAuthError(ret)
-				else: raise OneDriveAPIException(ret)
-			if local_path != None:
-				with open(local_path, 'wb') as f: f.write(r.content)
-			else: return r.content
-		except OneDriveAuthError:
-			self.auto_recover_auth_error()
-			return self.get(entry_id, local_path)
-		except requests.exceptions.ConnectionError:
-			self.logger.info('network connection error.')
-			self.threadman.hang_caller()
-			return self.get(entry_id, local_path)
+		while True:
+			try:
+				r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/content')
+				if r.status_code != requests.codes.ok:
+					ret = r.json()
+					# TODO: try testing this
+					if 'error' in ret and 'code' in ret['error'] and ret['error']['code'] == 'request_token_expired': 
+						raise OneDriveAuthError(ret)
+					else: raise OneDriveAPIException(ret)
+				if local_path != None:
+					with open(local_path, 'wb') as f: f.write(r.content)
+				else: return r.content
+			except OneDriveAuthError:
+				self.auto_recover_auth_error()
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
 	
 	def rm(self, entry_id):
 		'''
 		OneDrive API always returns HTTP 204.
 		'''
-		try:
-			self.http_client.delete(OneDriveAPI.API_URI + entry_id)
-		except requests.exceptions.ConnectionError:
-			self.logger.info('network connection error.')
-			self.threadman.hang_caller()
-			self.rm(entry_id)
+		while True:
+			try:
+				self.http_client.delete(OneDriveAPI.API_URI + entry_id)
+				return
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
 	
 	def get_user_info(self, user_id = 'me'):
-		try:
-			r = self.http_client.get(OneDriveAPI.API_URI + user_id)
-			return self.parse_response(r, OneDriveAPIException, requests.codes.ok)
-		except OneDriveAuthError:
-			self.auto_recover_auth_error()
-			return self.get_user_info(user_id)
-		except requests.exceptions.ConnectionError:
-			self.logger.info('network connection error.')
-			self.threadman.hang_caller()
-			return self.get_user_info(user_id)
+		while True:
+			try:
+				r = self.http_client.get(OneDriveAPI.API_URI + user_id)
+				return self.parse_response(r, OneDriveAPIException, requests.codes.ok)
+			except OneDriveAuthError:
+				self.auto_recover_auth_error()
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
 	
 	def get_contact_list(self, user_id = 'me'):
-		try:
-			r = self.http_client.get(OneDriveAPI.API_URI + user_id + '/friends')
-			return self.parse_response(r, OneDriveAPIException, requests.codes.ok)
-		except OneDriveAuthError:
-			self.auto_recover_auth_error()
-			return self.get_contact_list(user_id)
-		except requests.exceptions.ConnectionError:
-			self.logger.info('network connection error.')
-			self.threadman.hang_caller()
-			return self.get_contact_list(user_id)
+		while True:
+			try:
+				r = self.http_client.get(OneDriveAPI.API_URI + user_id + '/friends')
+				return self.parse_response(r, OneDriveAPIException, requests.codes.ok)
+			except OneDriveAuthError:
+				self.auto_recover_auth_error()
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
 	

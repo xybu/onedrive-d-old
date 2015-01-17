@@ -44,14 +44,14 @@ class NetworkingThreadManager(threading.Thread):
 		self.logger.info('waken up by ThreadManager.')
 		del self.conditions[threading.current_thread().ident]
 	
-	def is_connected(self, host_name = 'apis.live.net', host_port = '443'):
+	def is_connected(self, host_name = 'onedrive.com', host_port = '80'):
 		'''
 		Test if the machine can reach the host:port.
 		'''
 		try:
 			host_ip = socket.gethostbyname(host_name)
 			s = socket.create_connection((host_ip, host_port), 1)
-			s.shutdown()
+			s.shutdown(socket.SHUT_RDWR)
 			s.close()
 			self.logger.debug('able to realize "' + host_name + ':' + host_port + '".')
 			return True

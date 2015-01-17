@@ -70,6 +70,7 @@ class ConfigSet:
 
 	params = {
 		'NETWORK_ERROR_RETRY_INTERVAL': 10, # in seconds
+		'DEEP_SCAN_INTERVAL': 30, # in seconds
 		'ONEDRIVE_ROOT_PATH': None,
 		'ONEDRIVE_TOKENS': None,
 		'ONEDRIVE_TOKENS_EXP': None
@@ -127,8 +128,11 @@ class ConfigSet:
 	
 	def get_access_token(self):
 		if ConfigSet.params['ONEDRIVE_TOKENS'] != None:
-			if str_to_time(ConfigSet.params['ONEDRIVE_TOKENS_EXP']) < now(): return None
-		return ConfigSet.params['ONEDRIVE_TOKENS']
+			return ConfigSet.params['ONEDRIVE_TOKENS']
+		else: return None
+	
+	def is_token_expired(self):
+		return str_to_time(ConfigSet.params['ONEDRIVE_TOKENS_EXP']) < now()
 	
 	def set_access_token(self, tokens):
 		d = now() + timedelta(seconds = tokens['expires_in'])

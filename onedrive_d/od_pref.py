@@ -29,13 +29,11 @@ def main():
 	for arg in sys.argv:
 		if arg.startswith('--ui='):
 			val = arg.split('=', maxsplit = 1)[1].lower()
-			if val == 'cli' and pref_guide == None:
-				pass
-			elif val == 'gtk' and pref_guide == None:
+			if val == 'gtk' and pref_guide == None:
 				# use gtk version as long as gtk arg is given
 				from od_pref_gtk import PreferenceGuide
 				pref_guide = PreferenceGuide()
-			else:
+			elif val != 'cli':
 				print('Error: unknown parameter "' + arg + '"')
 				sys.exit(1)
 		elif arg.lower() == '--help':
