@@ -71,6 +71,7 @@ class ConfigSet:
 	params = {
 		'NETWORK_ERROR_RETRY_INTERVAL': 10, # in seconds
 		'DEEP_SCAN_INTERVAL': 30, # in seconds
+		'NUM_OF_WORKERS': 3,
 		'ONEDRIVE_ROOT_PATH': None,
 		'ONEDRIVE_TOKENS': None,
 		'ONEDRIVE_TOKENS_EXP': None
@@ -102,14 +103,14 @@ class ConfigSet:
 				with open(self.APP_CONF_FILE, 'r') as f:
 					saved_params = json.loads(f.read())
 					for key in saved_params:
-						ConfigSet.params[key] = saved_params[key]
+						self.params[key] = saved_params[key]
 			except:
 				get_logger().info('fail to read config file "' + self.APP_CONF_FILE + '". Use default.')
 		elif not setup_mode:
 				get_logger().critical('onedrive-d config file does not exist. Exit.')
 				sys.exit(1)
 		
-		if ConfigSet.params['ONEDRIVE_ROOT_PATH'] == None and not setup_mode:
+		if self.params['ONEDRIVE_ROOT_PATH'] == None and not setup_mode:
 			get_logger().critical('path to local OneDrive repo is not set.')
 			sys.exit(1)
 		
@@ -117,33 +118,33 @@ class ConfigSet:
 		
 		if not setup_mode:
 			if os.path.exists(self.APP_IGNORE_FILE):
-				self.ignore_list = od_ignore_list.IgnoreList(self.APP_IGNORE_FILE, ConfigSet.params['ONEDRIVE_ROOT_PATH'])
+				self.ignore_list = od_ignore_list.IgnoreList(self.APP_IGNORE_FILE, self.params['ONEDRIVE_ROOT_PATH'])
 			else: 
 				get_logger().info('ignore list file was not found.')
 				self.ignore_list = None
 	
 	def set_root_path(self, path):
-		ConfigSet.params['ONEDRIVE_ROOT_PATH'] = path
+		self.params['ONEDRIVE_ROOT_PATH'] = path
 		self.is_dirty = True
 	
 	def get_access_token(self):
-		if ConfigSet.params['ONEDRIVE_TOKENS'] != None:
-			return ConfigSet.params['ONEDRIVE_TOKENS']
+		if self.params['ONEDRIVE_TOKENS'] != None:
+			return self.params['ONEDRIVE_TOKENS']
 		else: return None
 	
 	def is_token_expired(self):
-		return str_to_time(ConfigSet.params['ONEDRIVE_TOKENS_EXP']) < now()
+		return str_to_time(self.params['ONEDRIVE_TOKENS_EXP']) < now()
 	
 	def set_access_token(self, tokens):
 		d = now() + timedelta(seconds = tokens['expires_in'])
-		ConfigSet.params['ONEDRIVE_TOKENS'] = tokens
-		ConfigSet.params['ONEDRIVE_TOKENS_EXP'] = time_to_str(d)
+		self.params['ONEDRIVE_TOKENS'] = tokens
+		self.params['ONEDRIVE_TOKENS_EXP'] = time_to_str(d)
 		self.is_dirty = True
 	
 	def dump(self):
 		try:
 			with open(self.APP_CONF_FILE, 'w') as f:
-				json.dump(ConfigSet.params, f)
+				json.dump(self.params, f)
 			os.chown(self.APP_CONF_FILE, self.OS_USER_ID, -1)
 			get_logger().info('config saved.')
 		except:

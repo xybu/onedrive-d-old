@@ -39,7 +39,17 @@ class IgnoreList:
 					if x.startswith('/'): x = base_path + x
 					else: x = '*/' + x
 					self.ignore_paths.append(x)
+	
+	def is_ignorable(self, name, parent_path):
+		for ign in self.ignore_names:
+			if fnmatch.fnmatch(name, ign): return True
 		
+		name = parent_path + '/' + name
+		for ign in self.ignore_paths:
+			if fnmatch.fnmatch(name, ign): return True
+		
+		return False
+	
 	def filter_list(self, names, parent_path):
 		'''
 		Given a list of names and their parent path, return the list of names

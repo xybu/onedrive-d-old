@@ -23,7 +23,7 @@ class NetworkingThreadManager(threading.Thread):
 	
 	def __init__(self):
 		super().__init__()
-		self.name = 'thread_manager'
+		self.name = 'thread_mgr'
 		self.daemon = True
 		self.sleep_queue = queue.Queue()
 		self.conditions = {}

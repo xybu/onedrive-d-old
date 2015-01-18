@@ -2,11 +2,12 @@
 
 import os
 import sys
+import time
 import threading
 import od_glob
 import od_onedrive_api
+import od_sqlite
 import od_inotify_thread
-import od_scanner_thread
 import od_worker_thread
 
 class Daemon:
@@ -39,10 +40,31 @@ class Daemon:
 		self.logger.info('try getting quota info.')
 		print(self.api.get_quota())
 	
+	def create_workers(self):
+		for i in range (0, self.config.params['NUM_OF_WORKERS']):
+			od_worker_thread.WorkerThread().start()
+	
+	def heart_beat(self):
+		self.taskmgr = od_sqlite.TaskManager()
+		while True:
+			self.taskmgr.add_task(**{
+				'type': 'sy',
+				'local_path': self.config.params['ONEDRIVE_ROOT_PATH'], 
+				'remote_id': self.api.get_root_entry_name()
+			})
+			time.sleep(self.config.params['DEEP_SCAN_INTERVAL'])
+	
 	def start(self):
 		try:
 			self.logger.info('daemon started.')
+			# do not check root path because it is checked in config
 			self.load_token()
 			self.test_quota()
+			self.create_workers()
+			self.heart_beat()
 		except KeyboardInterrupt:
+			# for debugging, dump task db
+			# print('SQLite TaskManager Dump:')
+			# for line in self.taskmgr.dump():
+			# 	print(line)
 			sys.exit(0)
