@@ -4,6 +4,9 @@
 // exclude any hidden file
 .*
 
+// exclude Windows-exclusive files
+desktop.ini
+
 // exclude temporary files
 *~
 Session.vim
