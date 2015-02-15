@@ -263,7 +263,8 @@ class OneDrive_API:
 		if name == '': raise OperationError({'error': 'empty_name', 'error_description': 'The file name cannot be empty.'})
 		uri += name
 		
-		if overwrite == True: uri += '?overwrite=true'
+		uri += "?downsize_photo_uploads=false"
+		if overwrite == True: uri += '&overwrite=true'
 		
 		if data != None: pass
 		elif local_path != None:
