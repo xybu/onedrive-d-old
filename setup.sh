@@ -82,7 +82,7 @@ case $DISTRIB_ID in
 		;;
 	opensuse)
 		PYGOBJECT_PKG_NAME='python-gobject'
-		INOTIFY_PKG_NAME='python3-pyinotify'
+		INOTIFY_PKG_NAME='inotify-tools'
 		SETUPTOOL_PKG_NAME='python3-pip'
 		INSTALL_CMD='sudo zypper install'
 		;;
