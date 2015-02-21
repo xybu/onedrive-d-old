@@ -81,7 +81,7 @@ case $DISTRIB_ID in
 		INSTALL_CMD='sudo pacman -S --needed'
 		;;
 	opensuse)
-		PYGOBJECT_PKG_NAME='python-gobject'
+		PYGOBJECT_PKG_NAME='python3-gobject'
 		INOTIFY_PKG_NAME='inotify-tools'
 		SETUPTOOL_PKG_NAME='python3-pip'
 		INSTALL_CMD='sudo zypper install'
