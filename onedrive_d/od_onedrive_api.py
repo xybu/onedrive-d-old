@@ -75,6 +75,7 @@ class OneDriveAPI:
 	OAUTH_SIGNOUT_URI = 'https://login.live.com/oauth20_logout.srf'
 	API_URI = 'https://apis.live.net/v5.0/'
 	FOLDER_TYPES = ['folder', 'album']
+	UNSUPPORTED_TYPES = ['notebook']
 	
 	def __init__(self, client_id, client_secret, client_scope = CLIENT_SCOPE, redirect_uri = REDIRECT_URI):
 		self.client_access_token = None
@@ -490,6 +491,10 @@ class OneDriveAPI:
 				self.threadman.hang_caller()
 		
 	def get(self, entry_id, local_path = None):
+		'''
+		Fetching content of OneNote files will raise OneDriveAPIException: 
+		Resource type 'notebook' doesn't support the path 'content'. (request_url_invalid)
+		'''
 		while True:
 			try:
 				r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/content')

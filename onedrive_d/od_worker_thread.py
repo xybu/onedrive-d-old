@@ -13,8 +13,10 @@ with the remote entry.
 
 import os
 import sys
+import json
 import threading
 import queue
+from send2trash import send2trash
 from . import od_glob
 from . import od_onedrive_api
 from . import od_sqlite
@@ -29,8 +31,8 @@ class WorkerThread(threading.Thread):
 		self.daemon = True
 		self.logger = od_glob.get_logger()
 		self.config = od_glob.get_config_instance()
-		self.task_in_progress = threading.Event()
-		self.task_in_progress.clear()
+		self.api = od_onedrive_api.get_instance()
+		#self.stop_event = stop_event
 		# self.can_run = threading.Event()
 		# self.can_run.set()
 		WorkerThread.worker_list.put(self)
@@ -42,9 +44,214 @@ class WorkerThread(threading.Thread):
 		pass
 	
 	def sync_dir(self, task):
-		entries = self.list_dir(task['local_path'])
-		print(entries)
-	
+		remote_entries = self.api.list_entries(folder_id = task['remote_id'])
+		local_entries = self.list_dir(task['local_path'])
+		is_recursive_task = 'recursive,' in task['args']
+
+		for entry in remote_entries:
+
+			# skip the entry if ignorable
+			if self.config.ignore_list.is_ignorable(entry['name'], task['local_path']):
+				continue
+
+			local_path = task['local_path'] + '/' + entry['name']
+
+			if entry['type'] in self.api.FOLDER_TYPES:
+				# remote entry is a directory
+				
+				if entry['name'] in local_entries and os.path.isfile(local_path):
+					# remote entry is a dir but local entry is a file
+					new_path = self.resolve_type_conflict(local_path, isdir = False)
+					if new_path == None:
+						self.logger.critical('entry "' + local_path + '" is remotely a dir but locally a file. Rename failed. Skip.')
+						local_entries.remove(entry['name'])
+						self.taskmgr.del_task(task['task_id'])
+						continue
+					else:
+						# TODO: can there be a local-remote correspondance to handle?
+						previous_entry = self.entrymgr.get_entry(isdir = False, local_path = local_path)
+						if previous_entry != None:
+							self.entrymgr.update_local_path(local_path, new_path)
+
+						# replace the old name with new name
+						local_entries.remove(entry['name'])
+						local_entries.append(os.path.basename(new_path))
+				
+				if entry['name'] not in local_entries:
+					# TODO: should determine if it is a deleted entry.
+					# this is a dir that exists remotely but not locally
+					try:
+						self.logger.debug('local dir "' + local_path + '" does not exist. Creating it.')
+						od_glob.mkdir(local_path, self.config.OS_USER_ID)
+						local_entries.append(entry['name'])
+					except OSError as e:
+						self.logger.error(e)
+						self.logger.error('failed to create local dir "' + local_path + '". Skip the remote entry.')
+						self.taskmgr.del_task(task['task_id'])
+						continue
+
+				self.entrymgr.update_entry(local_path, entry)
+
+				if is_recursive_task:
+					self.taskmgr.add_task(type = task['type'], 
+						local_path = local_path, remote_id = entry['id'], 
+						remote_parent_id = entry['parent_id'], args = task['args'])
+
+				local_entries.remove(entry['name'])
+			elif entry['type'] not in self.api.UNSUPPORTED_TYPES:
+				# remote entry is a file
+				if entry['name'] in local_entries and os.path.isdir(local_path):
+					# remote entry is a file but local one is dir
+					new_path = self.resolve_type_conflict(local_path, isdir = True)
+					if new_path == None:
+						self.logger.critical('entry "' + local_path + '" is remotely a file but locally a dir. Rename failed. Skip.')
+						local_entries.remove(entry['name'])
+						self.taskmgr.del_task(task['task_id'])
+						continue
+					else:
+						# previous_entry = self.entrymgr.get_entry(isdir = True, local_path = local_path)
+						# if previous_entry != None:
+						# 	self.entrymgr.update_local_path(local_path, new_path)
+						# replace the old name with new name
+						# local_entries.remove(entry['name'])
+						local_entries.append(os.path.basename(new_path))
+				self.analyze_file_path(local_path, task['remote_id'], entry, local_entries)
+				if entry['name'] in local_entries: local_entries.remove(entry['name'])
+			else:
+				self.logger.error('skipped file "' + task['local_path'] + '/' + entry['name'] + '" of unsupported type "' + entry['type'] + '".')
+		
+		for ent_name in local_entries:
+			# untouched local files
+			local_path = task['local_path'] + '/' + ent_name
+			if os.path.isdir(local_path):
+				previous_entry = self.entrymgr.get_entry(isdir = True, local_path = local_path)
+				if previous_entry != None:
+					# there was an old record about this dir before
+					# but now the dir in remote is gone
+					try:
+						send2trash(local_path)
+						self.entrymgr.del_entry_by_parent(parent_path = local_path)
+					except OSError as e:
+						self.logger.error(e)
+				else:
+					# probably a dir that was newly created
+					self.taskmgr.add_task('mk', local_path, remote_parent_id = task['remote_id'], args='sy,recursive')
+			else:
+				# we can pass local_entries during the iteration because the branch to run
+				# in analyze_file_path will not modify local_entries.
+				self.analyze_file_path(local_path, task['remote_id'], None, local_entries)
+
+		self.taskmgr.del_task(task['task_id'])
+
+	def analyze_file_path(self, local_path, remote_parent_id, entry, local_entries):
+		'''
+		@param local_path: path either pointing to a file or DNE.
+		'''
+		is_exist = os.path.exists(local_path)
+		previous_entry = self.entrymgr.get_entry(isdir = False, local_path = local_path)
+		if not is_exist and entry != None:
+			if previous_entry != None and previous_entry['remote_id'] == entry['id'] and previous_entry['client_updated_time'] == entry['client_updated_time']:
+				# remote record exists, previous record exists, same record, but file doesn't exist.
+				# the file is more likely to be deleted when daemon is off.
+				self.taskmgr.add_task('rf', local_path, entry['id'], entry['parent_id'])
+				# self.entrymgr.del_entry_by_remote_id(entry['id'])
+			else:
+				# no previous record, 
+				# or prev record exists, but its points to a different entry,
+				# or prev record exists, and same entry, but timestamps differ (local is older for sure).
+				self.taskmgr.add_task('dl', local_path, entry['id'], entry['parent_id'], args='add_row,', extra_info = json.dumps(entry))
+		elif is_exist:
+			# the file exists
+			try:
+				local_mtime = od_glob.timestamp_to_time(os.path.getmtime(local_path))
+				local_fsize = os.path.getsize(local_path)
+			except OSError as e:
+				self.logger.error(e)
+				return
+
+			if entry == None:
+				# no remote record given for analysis
+				if previous_entry != None:
+					# the file existed on server before, but not found on server this time
+					remote_mtime = od_glob.str_to_time(previous_entry['client_updated_time'])
+					if local_mtime != remote_mtime:
+						# but the file was changed after last sync. Better upload than delete.
+						#if local_fsize >= self.config.params['BITS_FILE_MIN_SIZE']:
+						self.taskmgr.add_task('up', local_path, remote_parent_id = remote_parent_id)
+					else:
+						# the file wasn't modified after it was last recorded. Delete it locally.
+						try:
+							self.logger.info('try sending file "' + local_path + '" to trash.')
+							send2trash(local_path)
+							self.entrymgr.del_entry_by_remote_id(previous_entry['remote_id'])
+						except OSError as e:
+							self.logger.error(e)
+							return
+				else:
+					# no local record either, most likely it is a new file
+					self.taskmgr.add_task('up', local_path, remote_parent_id = remote_parent_id)
+			else:
+				# both file and remote record exist
+				remote_mtime = od_glob.str_to_time(entry['client_updated_time'])
+				if previous_entry == None:
+					# no previous record for reference
+					# always keep both because we cannot determine from mtime and file size
+					new_path = self.resolve_conflict(local_path, self.config.OS_HOSTNAME)
+					if new_path == None:
+						self.logger.critical('cannot rename file "' + local_path + '" to avoid conflict. Skip the conflicting remote file.')
+						return
+					# add the renamed local file to list so as to upload it later
+					local_entries.append(os.path.basename(new_path))
+					# download the remote file to the path
+					self.taskmgr.add_task('dl', local_path, entry['id'], entry['parent_id'], args='add_row,', extra_info = json.dumps(entry))
+				else:
+					# we have a previous record for reference
+					if previous_entry['remote_id'] == entry['id']:
+						# at least they are the same entry
+						if local_mtime > remote_mtime and entry['client_updated_time'] == previous_entry['client_updated_time']:
+							# the local file is strictly newer, so upload it
+							self.taskmgr.add_task('up', local_path, entry['id'], entry['parent_id'])
+						elif local_mtime < remote_mtime and local_mtime == od_glob.str_to_time(previous_entry['client_updated_time']):
+							# the remote entry is strictly newer, so download it
+							self.taskmgr.add_task('dl', local_path, entry['id'], entry['parent_id'], args='add_row,', extra_info = json.dumps(entry))
+						elif local_mtime != remote_mtime or entry['client_updated_time'] != previous_entry['client_updated_time']:
+							# there may be more than one revisions between them
+							# better keep both
+							new_path = self.resolve_conflict(local_path, self.config.OS_HOSTNAME)
+							if new_path == None:
+								self.logger.critical('cannot rename file "' + local_path + '" to avoid conflict. Skip the conflicting remote file.')
+								return
+							# add the renamed local file to list so as to upload it later
+							local_entries.append(os.path.basename(new_path))
+							# the existing entry record will be for the downloaded file
+							# the renamed file will be treated as a newly created file later
+							# download the remote file to the path
+							self.taskmgr.add_task('dl', local_path, entry['id'], entry['parent_id'], args='add_row,', extra_info = json.dumps(entry))
+						else:
+							# local record and remote record match perfectly
+							pass
+					else:
+						# same path, but no longer same entry seen by server
+						# one must have replaced the other
+						if local_mtime != od_glob.str_to_time(previous_entry['client_updated_time']):
+							# the local file was modified since its last sync
+							# better keep it
+							new_path = self.resolve_conflict(local_path, self.config.OS_HOSTNAME)
+							if new_path == None:
+								self.logger.critical('cannot rename file "' + local_path + '" to avoid conflict. Skip the conflicting remote file.')
+								return
+							local_entries.append(os.path.basename(new_path))
+						#else:
+							# the local file was not modified since its last sync
+							# so the user must have replaced it with the remote one
+						#	pass
+						self.taskmgr.add_task('dl', local_path, entry['id'], entry['parent_id'], args='add_row,', extra_info = json.dumps(entry))
+		else:
+			# the file does not exist, and there is no remote entry
+			# there must be logical bug calling this function
+			raise Exception("analyze_file_path: local_path and entry cannot both be NULL.")
+		
+
 	def make_remote_dir(self, task):
 		pass
 	
@@ -53,12 +260,14 @@ class WorkerThread(threading.Thread):
 	
 	def run(self):
 		self.taskmgr = od_sqlite.TaskManager()
-		while True:
+		self.entrymgr = od_sqlite.EntryManager()
+		while True: # not self.stop_event.is_set():
 			self.taskmgr.dec_sem()
 			task = self.taskmgr.get_task()
 			if task == None:
 				self.logger.debug('got null task.')
 				continue
+			
 			# this requires the dir to be created before the task is fetched.
 			if os.path.isdir(task['local_path']):
 				if task['type'] == 'sy': self.sync_dir(task)
@@ -70,7 +279,7 @@ class WorkerThread(threading.Thread):
 				if task['type'] == 'up': pass
 				elif task['type'] == 'dl': pass
 				elif task['type'] == 'mv': pass
-				elif task['type'] == 'rm': pass
+				elif task['type'] == 'rf': pass
 				elif task['type'] == 'cp': pass
 	
 	def list_dir(self, path):
@@ -101,3 +310,45 @@ class WorkerThread(threading.Thread):
 				ent_list.append(ent)
 				ent_count[ent_dup] = 0
 		return ent_list
+
+	def resolve_type_conflict(self, path, isdir):
+		if isdir: t = 'dir'
+		else: t = 'file'
+		return self.resolve_conflict(path, t)
+
+	def resolve_conflict(self, path, t):
+		'''
+		Append a type flag after the entry name when 
+		 * the remote entry is a dir while the local entry is a file, or 
+		 * when the remote entry is a file while the local entry is a dir.
+
+		@param path: the local file path
+		@param isdir: previously calculated os.path.isdir(path)
+
+		@return None if failed to rename
+		@return new_path if renaming succeeds.
+		'''
+		name, ext = os.path.splitext(path)
+		new_path = name + ' (' + t + ')' + ext
+		if not os.path.exists(new_path):
+			try:
+				os.rename(path, new_path)
+				return new_path
+			except OSError as e:
+				self.logger.error(e)
+				return None
+		else:
+			i = 1
+			while True:
+				new_path = name + ' (' + t + ', ' + str(i) + ')' + ext
+				if not os.path.exists(new_path):
+					try:
+						os.rename(path, new_path)
+						return new_path
+					except OSError as e:
+						self.logger.error(e)
+						return None
+				i += 1
+
+
+

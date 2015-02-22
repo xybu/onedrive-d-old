@@ -16,6 +16,7 @@ from . import od_ignore_list
 
 config_instance = None
 logger_instance = None
+update_last_run_timestamp = False
 
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S%z'
 APP_CLIENT_ID = '000000004010C916'
@@ -55,6 +56,9 @@ def str_to_time(s):
 def str_to_timestamp(s):
 	return timegm(str_to_time(s).timetuple())
 
+def timestamp_to_time(t):
+	return datetime.fromtimestamp(t, tz=timezone.utc)
+
 def mkdir(path, uid):
 	'''
 	Create a path and set up owner uid.
@@ -62,7 +66,12 @@ def mkdir(path, uid):
 	os.mkdir(path)
 	os.chown(path, uid, -1)
 
+def will_update_last_run_time():
+	update_last_run_timestamp = True
+
 def dump_config():
+	if update_last_run_timestamp and config_instance != None:
+		config_instance.set_last_run_timestamp()
 	if config_instance != None and config_instance.is_dirty:
 		config_instance.dump()
 
@@ -76,7 +85,8 @@ class ConfigSet:
 		'BITS_BLOCK_SIZE': 1048576, # 1 MiB per block for BITS API
 		'ONEDRIVE_ROOT_PATH': None,
 		'ONEDRIVE_TOKENS': None,
-		'ONEDRIVE_TOKENS_EXP': None
+		'ONEDRIVE_TOKENS_EXP': None,
+		'LAST_RUN_TIMESTAMP': '1970-01-01T00:00:00+0000'
 	}
 	
 	def __init__(self, setup_mode = False):
@@ -116,6 +126,9 @@ class ConfigSet:
 			get_logger().critical('path to local OneDrive repo is not set.')
 			sys.exit(1)
 		
+
+		self.LAST_RUN_TIMESTAMP = str_to_time(self.params['LAST_RUN_TIMESTAMP'])
+
 		self.APP_IGNORE_FILE = self.APP_CONF_PATH + '/ignore_v2.ini'
 		
 		if not setup_mode:
@@ -129,6 +142,10 @@ class ConfigSet:
 		self.params['ONEDRIVE_ROOT_PATH'] = path
 		self.is_dirty = True
 	
+	def set_last_run_timestamp(self):
+		self.params['LAST_RUN_TIMESTAMP'] = time_to_str(now())
+		self.is_dirty = True
+
 	def get_access_token(self):
 		if self.params['ONEDRIVE_TOKENS'] != None:
 			return self.params['ONEDRIVE_TOKENS']

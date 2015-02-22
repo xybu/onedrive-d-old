@@ -26,7 +26,10 @@ git clone https://github.com/xybu/onedrive-d.git
 cd onedrive-d
 ```
 
-(3) Install pre-requisite packages
+(3) Pre-requisites
+
+Your local filesystem must store UTC timestamps, not local time. This is true
+for most Unix filesystems.
 
 onedrive-d requires Python3 intepreter. If Python version is older than 3.4, `python3-pip` is also required.
 
@@ -89,6 +92,13 @@ Note that the commands above are no longer valid after installing the package to
 ## Removal
 
 Refer to step 1 of section "Installation".
+
+## Data Integrity
+
+ * Files and directories "deleted" locally can be found in Trash.
+ * Files and directories "deleted" remotely can be found in OneDrive recycle bin.
+ * Files overwritten remotely can be recovered by OneDrive file version feature.
+ * onedrive-d only performs overwriting when it is 100% sure one file is older than its local/remote counterpart.
 
 ## Multi-Threading
 

@@ -1,5 +1,5 @@
 # Created by http://www.gitignore.io
-
+test.*
 test_*
 tests/
 

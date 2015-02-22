@@ -7,7 +7,7 @@ Usage:
 '''
 
 import sys
-import .od_glob
+from . import od_glob
 
 def print_usage():
 	print('Usage: ' + sys.argv[0] + ' [--ui=cli|gtk] [--help]')
