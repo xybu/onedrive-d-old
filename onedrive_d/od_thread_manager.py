@@ -8,7 +8,7 @@ import time
 import socket
 import threading
 import queue
-import od_glob
+from . import od_glob
 
 instance = None
 

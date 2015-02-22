@@ -7,7 +7,7 @@ Usage:
 '''
 
 import sys
-import od_glob
+import .od_glob
 
 def print_usage():
 	print('Usage: ' + sys.argv[0] + ' [--ui=cli|gtk] [--help]')
@@ -30,14 +30,14 @@ def main():
 			val = arg.split('=', maxsplit = 1)[1].lower()
 			if val == 'gtk' and daemon == None:
 				# use gtk version as long as gtk arg is given
-				import od_daemon_gtk
+				from . import od_daemon_gtk
 				daemon = od_daemon_gtk.Daemon()
 			elif val != 'cli':
 				print('Error: unknown parameter "' + arg + '"')
 				sys.exit(1)
 	
 	if daemon == None:
-		import od_daemon_cli
+		from . import od_daemon_cli
 		daemon = od_daemon_cli.Daemon()
 	
 	# start UI engine

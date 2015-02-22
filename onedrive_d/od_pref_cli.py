@@ -7,8 +7,8 @@ Preference Guide (CLI version) for onedrive-d
 import sys
 import os
 import subprocess
-import od_glob
-import od_onedrive_api
+from . import od_glob
+from . import od_onedrive_api
 
 def query_yes_no(question, default='yes'):
 	valid = {'yes': True, 'y': True, 'ye': True, 'no': False, 'n': False}
@@ -69,7 +69,7 @@ class PreferenceGuide:
 		print('\nYou will need to visit the OneDrive sign-in page in a browser, ')
 		print('log in and authorize onedrive-d, and then copy and paste the ')
 		print('callback URL, which should start with \n"%s".\n' % self.api.client_redirect_uri)
-		print('The callback URL is the URL where the sign-in page finally goes blank.\n')
+		print('\033[1mThe callback URL is the URL where the sign-in page finally goes blank.\033[21m\n')
 		print('Please visit the sign-in URL in your browser:\n')
 		print(self.api.get_auth_uri())
 		callback_uri = input('\nPlease paste the callback URL:\n')
@@ -108,6 +108,24 @@ class PreferenceGuide:
 			try:
 				inp = int(inp)
 				self.config.params['NETWORK_ERROR_RETRY_INTERVAL'] = inp
+			except Exception as e:
+				print(bcolors.WARNING + 'Error: {}.'.format(e) + bcolors.ENDC)
+				print(bcolors.WARNING + 'Value did not set.' + bcolors.ENDC)
+		inp = input('\nFiles larger than what size (in MiB) will be uploaded blocks by blocks? (current: ' + str(self.config.params['BITS_FILE_MIN_SIZE'] / 2 ** 20) + ')?').strip()
+		if inp == '': inp = self.config.params['BITS_FILE_MIN_SIZE']
+		else:
+			try:
+				inp = int(inp)
+				self.config.params['BITS_FILE_MIN_SIZE'] = inp * 2 ** 20
+			except Exception as e:
+				print(bcolors.WARNING + 'Error: {}.'.format(e) + bcolors.ENDC)
+				print(bcolors.WARNING + 'Value did not set.' + bcolors.ENDC)
+		inp = input('\nWhen a file is uploaded blocks by blocks, what is the block size (in KiB)? (current: ' + str(self.config.params['BITS_BLOCK_SIZE'] / 2 ** 10) + ')?').strip()
+		if inp == '': inp = self.config.params['BITS_BLOCK_SIZE']
+		else:
+			try:
+				inp = int(inp)
+				self.config.params['BITS_BLOCK_SIZE'] = inp * 2 ** 10
 			except Exception as e:
 				print(bcolors.WARNING + 'Error: {}.'.format(e) + bcolors.ENDC)
 				print(bcolors.WARNING + 'Value did not set.' + bcolors.ENDC)

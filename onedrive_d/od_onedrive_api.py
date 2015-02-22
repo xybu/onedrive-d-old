@@ -24,8 +24,8 @@ import functools
 import fcntl
 # import imghdr
 import requests
-import od_glob
-import od_thread_manager
+from . import od_glob
+from . import od_thread_manager
 
 api_instance = None
 

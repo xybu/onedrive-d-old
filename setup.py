@@ -41,11 +41,11 @@ setup(
 	
 	packages=find_packages(),
 	include_package_data=True,
-	package_data={'onedrive_d': ['res/*.png']},
+	package_data={'onedrive_d': ['res/*.png', 'res/*.ini']},
 	#scripts=['daemon/onedrive-daemon','daemon/onedrive-utils'],
 	exclude_package_data={'': ['README.*']},
 
-	# entry_points = dict(console_scripts=[
-	#	'onedrive-d = onedrive_d.daemon:main', 
-	#	'onedrive-prefs = onedrive_d.prefs:main'])
+	entry_points = dict(console_scripts=[
+		'onedrive-d = onedrive_d.od_main:main', 
+		'onedrive-pref = onedrive_d.od_pref:main'])
 )

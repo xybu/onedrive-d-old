@@ -31,8 +31,8 @@ def main():
 			val = arg.split('=', maxsplit = 1)[1].lower()
 			if val == 'gtk' and pref_guide == None:
 				# use gtk version as long as gtk arg is given
-				from od_pref_gtk import PreferenceGuide
-				pref_guide = PreferenceGuide()
+				from . import od_pref_gtk
+				pref_guide = od_pref_gtk.PreferenceGuide()
 			elif val != 'cli':
 				print('Error: unknown parameter "' + arg + '"')
 				sys.exit(1)
@@ -41,8 +41,8 @@ def main():
 			sys.exit(0)
 	
 	if pref_guide == None:
-		from od_pref_cli import PreferenceGuide
-		pref_guide = PreferenceGuide()
+		from . import od_pref_cli
+		pref_guide = od_pref_cli.PreferenceGuide()
 	
 	pref_guide.start()
 

@@ -15,9 +15,9 @@ import os
 import sys
 import threading
 import queue
-import od_glob
-import od_onedrive_api
-import od_sqlite
+from . import od_glob
+from . import od_onedrive_api
+from . import od_sqlite
 
 class WorkerThread(threading.Thread):
 	

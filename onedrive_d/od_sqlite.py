@@ -6,7 +6,7 @@ Database manipulator classes for onedrive-d.
 
 import threading
 import sqlite3
-import od_glob
+from . import od_glob
 
 class TaskManager:
 	'''

@@ -4,11 +4,11 @@ import os
 import sys
 import time
 import threading
-import od_glob
-import od_onedrive_api
-import od_sqlite
-import od_inotify_thread
-import od_worker_thread
+from . import od_glob
+from . import od_onedrive_api
+from . import od_sqlite
+from . import od_inotify_thread
+from . import od_worker_thread
 
 class Daemon:
 	

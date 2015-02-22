@@ -12,7 +12,7 @@ import json
 from calendar import timegm
 from datetime import timezone, datetime, timedelta
 from pwd import getpwnam
-import od_ignore_list
+from . import od_ignore_list
 
 config_instance = None
 logger_instance = None
