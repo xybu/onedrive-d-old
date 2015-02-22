@@ -10,14 +10,14 @@ except IOError:
 
 setup(
 	name='onedrive-d',
-	version='1.0-dev',
+	version='1.0.0dev',
 	author='Xiangyu Bu',
 	author_email='xybu92@live.com',
 	license='GPLv3',
 	keywords=['onedrive', 'microsoft', 'daemon', 'live', 'liveconnect',
 		'cloud', 'storage', 'storage provider', 'file hosting', 'skydrive'],
 	url='http://github.com/xybu/onedrive-d',
-	description='A Microsoft OneDrive client for Debian/Ubuntu desktop.',
+	description='A Microsoft OneDrive Desktop client program for Linux.',
 	long_description=readme,
 	classifiers=[
 		'Development Status :: 3 - Alpha',

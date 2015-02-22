@@ -35,6 +35,7 @@ class Daemon:
 			# the token exists and is not expired
 			self.api.set_access_token(tokens['access_token'])
 			self.api.set_refresh_token(tokens['refresh_token'])
+			self.api.set_user_id(tokens['user_id'])
 	
 	def test_quota(self):
 		self.logger.info('try getting quota info.')

@@ -20,7 +20,9 @@ Bullets 3 and 4 are like interrupt handling.
 import os
 import json
 import urllib
-import imghdr
+import functools
+import fcntl
+# import imghdr
 import requests
 import od_glob
 import od_thread_manager
@@ -36,7 +38,9 @@ def get_instance():
 class OneDriveAPIException(Exception):
 	def __init__(self, args = None):
 		super().__init__()
-		if 'error_description' in args:
+		if args == None:
+			pass
+		elif 'error_description' in args:
 			self.errno = args['error']
 			self.message = args['error_description']
 		elif 'error' in args and 'code' in args['error']:
@@ -95,6 +99,7 @@ class OneDriveAPI:
 		if self.client_refresh_token == None: raise OneDriveAuthError()
 		refreshed_token_set = self.refresh_token(self.client_refresh_token)
 		od_glob.get_config_instance().set_access_token(refreshed_token_set)
+		self.logger.info('auto refreshed API token in face of auth error.')
 	
 	def get_auth_uri(self, display = 'touch', locale = 'en', state = ''):
 		'''
@@ -117,6 +122,9 @@ class OneDriveAPI:
 	def is_signed_in(self):
 		return self.access_token != None
 	
+	def set_user_id(self, id):
+		self.user_id = id
+
 	def set_access_token(self, token):
 		self.client_access_token = token
 		self.http_client.headers.update({'Authorization': 'Bearer ' + token})
@@ -150,6 +158,7 @@ class OneDriveAPI:
 			response = self.parse_response(request, OneDriveAPIException)
 			self.set_access_token(response['access_token'])
 			self.set_refresh_token(response['refresh_token'])
+			self.set_user_id(response['user_id'])
 			return response
 		except requests.exceptions.ConnectionError:
 			self.logger.info('network connection error.')
@@ -170,6 +179,7 @@ class OneDriveAPI:
 				response = self.parse_response(request, OneDriveAPIException)
 				self.set_access_token(response['access_token'])
 				self.set_refresh_token(response['refresh_token'])
+				self.set_user_id(response['user_id'])
 				return response
 			except requests.exceptions.ConnectionError:
 				self.logger.info('network connection error.')
@@ -312,6 +322,116 @@ class OneDriveAPI:
 	def mv(self, target_id, dest_folder_id, overwrite = True):
 		return self.cp(target_id, dest_folder_id, overwrite, 'MOVE')
 	
+	def bits_put(self, name, folder_id = 'me/skydrive', local_path = None, remote_path = None, block_size = 1048576):
+		'''
+		Upload a large file with Microsoft BITS API.
+		A detailed document: https://gist.github.com/rgregg/37ba8929768a62131e85
+		Official document: https://msdn.microsoft.com/en-us/library/aa362821%28v=vs.85%29.aspx
+
+		@param name: remote file name
+		@param folder_id: the folder_id returned by Live API
+		@param local_path: the local path of the file to upload
+		@param remote_path: the remote path to put the file. If given folder_id will be ignored.
+
+		@return None if an unrecoverable error occurs; or a file property dict.
+		'''
+		
+		# get file size
+		try:
+			source_size = os.path.getsize(local_path)
+		except:
+			self.logger.error("cannot get file size of \"" + local_path + "\"")
+			return None
+
+		# produce request url
+		if remote_path != None:
+			url = "https://cid-" + self.user_id + ".users.storage.live.com/users/0x" + self.user_id + "/LiveFolders/" + self.remote_path
+		else:
+			bits_folder_id = folder_id.split('.')[-1]
+			url = "https://cid-" + self.user_id + ".users.storage.live.com/items/" + bits_folder_id + "/" + name
+		
+		# BITS: Create-Session
+		headers = {
+			'X-Http-Method-Override': 'BITS_POST',
+			'Content-Length': 0,
+			'BITS-Packet-Type': 'Create-Session',
+			'BITS-Supported-Protocols': '{7df0354d-249b-430f-820d-3d2a9bef4931}'
+		}
+
+		while True:
+			try:
+				response = self.http_client.request('post', url, headers = headers)
+				if response.status_code == 401:
+					response.close()
+					raise OneDriveAuthError()
+				elif response.status_code != 201:
+					# probably unrecoverable error
+					self.logger.error("failed BITS Create-Session request to upload \"" + local_path + "\". Status code: %d", response.status_code)
+					response.close()
+					return None
+				session_id = response.headers['bits-session-id']
+				response.close()
+				break
+			except OneDriveAuthError:
+				self.auto_recover_auth_error()
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
+		del headers
+
+		# BITS: upload file by blocks
+		source_file = open(local_path, 'rb')
+		fcntl.flock(source_file.fileno(), fcntl.LOCK_EX)
+		source_cursor = 0				# start from 0B position
+		while source_cursor < source_size:
+			target_cursor = min(source_cursor + block_size, source_size) - 1
+			data = source_file.read(block_size)
+			self.logger.debug("try uploading BITS fragment %d - %d (total: %d B)", source_cursor, target_cursor, source_size)
+
+			while True:
+				try:
+					response = self.http_client.request('post', url, data = data, headers = {
+						'X-Http-Method-Override': 'BITS_POST',
+						'BITS-Packet-Type': 'Fragment',
+						'BITS-Session-Id': session_id,
+						'Content-Range': 'bytes {}-{}/{}'.format(source_cursor, target_cursor, source_size)
+					})
+					response.close()
+					break
+				except OneDriveAuthError:
+					self.auto_recover_auth_error()
+				except requests.exceptions.ConnectionError:
+					self.logger.info('network connection error.')
+					self.threadman.hang_caller()
+
+			source_cursor = target_cursor + 1
+			del data
+
+		# BITS: close session
+		while True:
+			try:
+				response = self.http_client.request('post', url, headers = {
+					'X-Http-Method-Override': 'BITS_POST',
+					'BITS-Packet-Type': 'Close-Session',
+					'BITS-Session-Id': session_id,
+					'Content-Length': 0
+				})
+				res_id = response.headers['x-resource-id']
+				#updated_time = od_glob.str_to_time(response.headers['x-last-modified-iso8601'])
+				response.close()
+				break
+			except OneDriveAuthError:
+				self.auto_recover_auth_error()
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
+
+		fcntl.flock(source_file.fileno(), fcntl.LOCK_UN)
+		source_file.close()
+
+		self.logger.debug('BITS upload complete.')
+		return self.get_property('file.' + res_id[:res_id.index('!')] + '.' + res_id)
+
 	def put(self, name, folder_id = 'me/skydrive', upload_location = None, local_path = None, data = None, overwrite = True):
 		'''
 		Upload the file or data to a path.

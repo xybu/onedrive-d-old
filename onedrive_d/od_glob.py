@@ -72,6 +72,8 @@ class ConfigSet:
 		'NETWORK_ERROR_RETRY_INTERVAL': 10, # in seconds
 		'DEEP_SCAN_INTERVAL': 30, # in seconds
 		'NUM_OF_WORKERS': 3,
+		'BITS_FILE_MIN_SIZE': 8388608, # files > 8 MiB will be uploaded with BITS API
+		'BITS_BLOCK_SIZE': 1048576, # 1 MiB per block for BITS API
 		'ONEDRIVE_ROOT_PATH': None,
 		'ONEDRIVE_TOKENS': None,
 		'ONEDRIVE_TOKENS_EXP': None
