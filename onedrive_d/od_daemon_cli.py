@@ -47,11 +47,12 @@ class Daemon:
 	
 	def heart_beat(self):
 		self.taskmgr = od_sqlite.TaskManager()
+		root_entry_id = self.api.get_property()['id']
 		while True:
 			self.taskmgr.add_task(**{
 				'type': 'sy',
 				'local_path': self.config.params['ONEDRIVE_ROOT_PATH'], 
-				'remote_id': self.api.get_root_entry_name(),
+				'remote_id': root_entry_id,
 				'args': 'recursive,'
 			})
 			time.sleep(self.config.params['DEEP_SCAN_INTERVAL'])
@@ -61,7 +62,7 @@ class Daemon:
 			self.logger.info('daemon started.')
 			# do not check root path because it is checked in config
 			self.load_token()
-			self.test_quota()
+			# self.test_quota()
 			od_glob.will_update_last_run_time()
 			self.create_workers()
 			self.heart_beat()

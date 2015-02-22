@@ -71,7 +71,10 @@ class WorkerThread(threading.Thread):
 						# TODO: can there be a local-remote correspondance to handle?
 						previous_entry = self.entrymgr.get_entry(isdir = False, local_path = local_path)
 						if previous_entry != None:
-							self.entrymgr.update_local_path(local_path, new_path)
+							# if we update entry, the file will be sent to trash if not modified
+							# self.entrymgr.update_local_path(local_path, new_path)
+							# deleting the entry record will have the renamed file uploaded
+							self.entrymgr.del_entry_by_remote_id(previous_entry['remote_id'])
 
 						# replace the old name with new name
 						local_entries.remove(entry['name'])
@@ -79,6 +82,7 @@ class WorkerThread(threading.Thread):
 				
 				if entry['name'] not in local_entries:
 					# TODO: should determine if it is a deleted entry.
+
 					# this is a dir that exists remotely but not locally
 					try:
 						self.logger.debug('local dir "' + local_path + '" does not exist. Creating it.')
@@ -164,7 +168,6 @@ class WorkerThread(threading.Thread):
 			# the file exists
 			try:
 				local_mtime = od_glob.timestamp_to_time(os.path.getmtime(local_path))
-				local_fsize = os.path.getsize(local_path)
 			except OSError as e:
 				self.logger.error(e)
 				return
@@ -176,7 +179,6 @@ class WorkerThread(threading.Thread):
 					remote_mtime = od_glob.str_to_time(previous_entry['client_updated_time'])
 					if local_mtime != remote_mtime:
 						# but the file was changed after last sync. Better upload than delete.
-						#if local_fsize >= self.config.params['BITS_FILE_MIN_SIZE']:
 						self.taskmgr.add_task('up', local_path, remote_parent_id = remote_parent_id)
 					else:
 						# the file wasn't modified after it was last recorded. Delete it locally.
@@ -250,14 +252,48 @@ class WorkerThread(threading.Thread):
 			# the file does not exist, and there is no remote entry
 			# there must be logical bug calling this function
 			raise Exception("analyze_file_path: local_path and entry cannot both be NULL.")
-		
-
+	
 	def make_remote_dir(self, task):
-		pass
+		name = os.path.basename(task['local_path'])
+		new_entry = self.api.mkdir(name, task['remote_parent_id'])
+		self.entrymgr.update_entry(task['local_path'], new_entry)
+		if os.path.exists(task['local_path']) and 'sy,' in task['args']:
+			if 'recursive,' in task['args']: is_recursive_task = 'recursive,'
+			else: is_recursive_task = ''
+			self.taskmgr.add_task(type = 'sy', local_path = task['local_path'], 
+				remote_id = new_entry['id'], remote_parent_id = task['remote_parent_id'], 
+				args = is_recursive_task)
+		self.taskmgr.del_task(task['task_id'])
 	
-	def trash_local_dir(self, task):
-		pass
-	
+	def upload_file(self, task):
+		try:
+			local_fsize = os.path.getsize(task['local_path'])
+		except OSError as e:
+			self.logger.error(e)
+			return
+		parent_path, basename = os.path.split(task['local_path'])
+		if local_fsize >= self.config.params['BITS_FILE_MIN_SIZE']:
+			# remote_path = task['local_path'][len(self.config.params['ONEDRIVE_ROOT_PATH']) + 1:]
+			new_entry = self.api.bits_put(basename, 
+				folder_id = task['remote_parent_id'],
+				local_path = task['local_path'], 
+				# remote_path = remote_path,
+				block_size = self.config.params['BITS_BLOCK_SIZE'])
+			if new_entry == None:
+				self.logger.error('failed to BITS upload "' + task['local_path'] + '".')
+				self.taskmgr.del_task(task['task_id'])
+				return
+		else:
+			new_entry = self.api.put(basename, 
+				folder_id = task['remote_parent_id'], 
+				local_path = task['local_path'])
+			# new_entry['parent_id'] = task['remote_parent_id']
+		self.entrymgr.update_entry(task['local_path'], new_entry)
+		# fix timestamp
+		t = od_glob.str_to_timestamp(new_entry['client_updated_time'])
+		os.utime(task['local_path'], (t, t))
+		self.taskmgr.del_task(task['task_id'])
+
 	def run(self):
 		self.taskmgr = od_sqlite.TaskManager()
 		self.entrymgr = od_sqlite.EntryManager()
@@ -268,19 +304,14 @@ class WorkerThread(threading.Thread):
 				self.logger.debug('got null task.')
 				continue
 			
-			# this requires the dir to be created before the task is fetched.
-			if os.path.isdir(task['local_path']):
-				if task['type'] == 'sy': self.sync_dir(task)
-				elif task['type'] == 'rm': self.remove_dir(task)
-				elif task['type'] == 'mk': self.make_remote_dir(task)
-				elif task['type'] == 'tr': self.trash_local_dir(task)
-			else:
-				# not a dir, then it is a file
-				if task['type'] == 'up': pass
-				elif task['type'] == 'dl': pass
-				elif task['type'] == 'mv': pass
-				elif task['type'] == 'rf': pass
-				elif task['type'] == 'cp': pass
+			if task['type'] == 'sy': self.sync_dir(task)
+			elif task['type'] == 'rm': self.remove_dir(task)
+			elif task['type'] == 'mk': self.make_remote_dir(task)
+			elif task['type'] == 'up': self.upload_file(task)
+			elif task['type'] == 'dl': pass
+			elif task['type'] == 'mv': pass
+			elif task['type'] == 'rf': pass
+			elif task['type'] == 'cp': pass
 	
 	def list_dir(self, path):
 		'''

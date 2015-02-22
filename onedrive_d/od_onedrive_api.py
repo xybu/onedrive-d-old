@@ -323,7 +323,7 @@ class OneDriveAPI:
 	def mv(self, target_id, dest_folder_id, overwrite = True):
 		return self.cp(target_id, dest_folder_id, overwrite, 'MOVE')
 	
-	def bits_put(self, name, folder_id = 'me/skydrive', local_path = None, remote_path = None, block_size = 1048576):
+	def bits_put(self, name, folder_id, local_path = None, block_size = 1048576):
 		'''
 		Upload a large file with Microsoft BITS API.
 		A detailed document: https://gist.github.com/rgregg/37ba8929768a62131e85
@@ -332,7 +332,7 @@ class OneDriveAPI:
 		@param name: remote file name
 		@param folder_id: the folder_id returned by Live API
 		@param local_path: the local path of the file to upload
-		@param remote_path: the remote path to put the file. If given folder_id will be ignored.
+		@param remote_path (X): the remote path to put the file.
 
 		@return None if an unrecoverable error occurs; or a file property dict.
 		'''
@@ -345,12 +345,22 @@ class OneDriveAPI:
 			return None
 
 		# produce request url
-		if remote_path != None:
-			url = "https://cid-" + self.user_id + ".users.storage.live.com/users/0x" + self.user_id + "/LiveFolders/" + self.remote_path
-		else:
+		if '!' in folder_id:
+			# subfolder
 			bits_folder_id = folder_id.split('.')[-1]
 			url = "https://cid-" + self.user_id + ".users.storage.live.com/items/" + bits_folder_id + "/" + name
-		
+		elif folder_id != '':
+			# root folder
+			user_id = folder_id.split('.')[-1]
+			url = "https://cid-" + user_id + ".users.storage.live.com/users/0x" + user_id + "/LiveFolders/" + name
+		# elif remote_path != None:
+		# 	url = "https://cid-" + user_id + ".users.storage.live.com/users/0x" + user_id + "/LiveFolders/" + remote_path
+		else:
+			self.logger.error("cannot request BITS. folder_id is invalid.")
+			return None
+
+		# self.logger.info(url)
+
 		# BITS: Create-Session
 		headers = {
 			'X-Http-Method-Override': 'BITS_POST',
@@ -367,6 +377,7 @@ class OneDriveAPI:
 					raise OneDriveAuthError()
 				elif response.status_code != 201:
 					# probably unrecoverable error
+					self.logger.error(response.headers)
 					self.logger.error("failed BITS Create-Session request to upload \"" + local_path + "\". Status code: %d", response.status_code)
 					response.close()
 					return None
@@ -387,7 +398,7 @@ class OneDriveAPI:
 		while source_cursor < source_size:
 			target_cursor = min(source_cursor + block_size, source_size) - 1
 			data = source_file.read(block_size)
-			self.logger.debug("try uploading BITS fragment %d - %d (total: %d B)", source_cursor, target_cursor, source_size)
+			self.logger.debug("uploading BITS block %d - %d (total: %d B)", source_cursor, target_cursor, source_size)
 
 			while True:
 				try:
@@ -448,7 +459,6 @@ class OneDriveAPI:
 		To put an empty file, either local_path points to an empty file or data is set ''.
 		To upload a dir, check if it exists, and then send recursive puts to upload its files.
 		
-		One issue is image resizing.
 		Another issue is timestamp correction.
 		'''
 		uri = OneDriveAPI.API_URI
@@ -458,12 +468,11 @@ class OneDriveAPI:
 		if name == '': raise OneDriveValueError({'error': 'empty_name', 'error_description': 'The file name cannot be empty.'})
 		uri += name
 		
-		# is checking file type necessary?
 		d = {
 			'downsize_photo_uploads': False,
 			'overwrite': overwrite
 		}
-		url += urllib.parse.urlencode(d)
+		uri += '?' + urllib.parse.urlencode(d)
 		
 		if data != None: pass
 		elif local_path != None:
@@ -483,7 +492,7 @@ class OneDriveAPI:
 					if 'error' in ret and 'code' in ret['error'] and ret['error']['code'] == 'request_token_expired': 
 						raise OneDriveAuthError(ret)
 					else: raise OneDriveAPIException(ret)
-				return ret
+				return self.get_property(ret['id'])
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
 			except requests.exceptions.ConnectionError:

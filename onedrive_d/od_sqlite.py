@@ -18,8 +18,8 @@ class TaskManager:
 	task types:
 		for dirs: sy (sync), rm (remove), mk (mkdir on server, postwork=[sy])
 		          tr (move local to trash).
-		for files: up (upload), dl (download, postwork=[add_row]), mv (move), rf (remove)
-		           cp (copy).
+		for files: up (upload), dl (download, postwork=[add_row]), 
+				mv (move), rf (remove), cp (copy).
 	'''
 	# this semaphore counts the number of tasks in the table
 	task_counter = threading.Semaphore(0)
@@ -62,7 +62,7 @@ class TaskManager:
 	def add_task(self, type, local_path, remote_id = '', remote_parent_id = '', status = 0, args = '', extra_info = ''):
 		print(type + ' ' + local_path)
 		self.acquire_lock()
-		self.cursor.execute('INSERT INTO tasks (type, local_path, remote_id, remote_parent_id, status, args, extra_info) VALUES (?,?,?,?,?,?,?)', 
+		self.cursor.execute('INSERT OR REPLACE INTO tasks (type, local_path, remote_id, remote_parent_id, status, args, extra_info) VALUES (?,?,?,?,?,?,?)', 
 			(type, local_path, remote_id, remote_parent_id, status, args, extra_info)
 		)
 		self.release_lock()
@@ -132,12 +132,15 @@ class EntryManager:
 		@param local_path: path to the local entry (MUST exist).
 		@param obj: REST object returned by API.
 		'''
+		# print(obj)
 		path, basename = os.path.split(local_path)
 		isdir = os.path.isdir(local_path)
+		if 'size' in obj: size = obj['size']
+		else: size = 0
 		self.acquire_lock()
 		ret = self.cursor.execute(
 			'INSERT OR REPLACE INTO entries (parent_path, name, isdir, remote_id, remote_parent_id, size, client_updated_time, status) VALUES (?,?,?,?,?,?,?,?)',
-			(path, basename, isdir, obj['id'], obj['parent_id'], obj['size'], obj['client_updated_time'], ''))
+			(path, basename, isdir, obj['id'], obj['parent_id'], size, obj['client_updated_time'], ''))
 		self.release_lock()
 		return ret
 	
@@ -202,5 +205,7 @@ class EntryManager:
 			self.cursor.execute('DELETE FROM entries WHERE remote_parent_id=?', (remote_parent_id, ))
 		if parent_path != None:
 			# this one simulates recursive deletion
+			path, basename = os.path.split(parent_path)
 			self.cursor.execute('DELETE FROM entries WHERE parent_path LIKE ? OR parent_path=?', (parent_path + '/%', parent_path))
+			self.cursor.execute('DELETE FROM entries WHERE parent_path=? AND name=?', (path, basename))
 		self.release_lock()
