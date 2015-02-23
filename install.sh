@@ -27,6 +27,11 @@ DISTRIB_ID=${DISTRIB_ID,,}
 # keep only alphanumerical chars
 DISTRIB_ID=$(echo $DISTRIB_ID | tr -cd [:alnum:])
 
+if [ ! -x "$(which sudo)" ] ; then
+	echo -e "\033[31mError: command \"sudo\" not found on your system.\e[0m"
+	exit 1
+fi
+
 case $DISTRIB_ID in
 	# Debian/Ubuntu family
 	elementaryos|debian|ubuntu|linuxmint)
