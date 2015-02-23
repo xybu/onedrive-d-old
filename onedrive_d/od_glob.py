@@ -17,6 +17,7 @@ from . import od_ignore_list
 config_instance = None
 logger_instance = None
 update_last_run_timestamp = False
+logging_level = None
 
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S%z'
 APP_CLIENT_ID = '000000004010C916'
@@ -34,12 +35,13 @@ def get_config_instance(force = False, setup_mode = False):
 		atexit.register(dump_config)
 	return config_instance
 
-def get_logger():
+def get_logger(level = logging.DEBUG):
 	global logger_instance
 	if logger_instance == None:
-		logging.basicConfig(format = '[%(asctime)-15s] %(threadName)s: %(message)s')
+		logging.basicConfig(format = '[%(asctime)-15s] %(levelname)s: %(threadName)s: %(message)s')
 		logger_instance = logging.getLogger(__name__)
-		logger_instance.setLevel(logging.DEBUG)
+		logger_instance.setLevel(level)
+		atexit.register(flush_log_at_shutdown)
 	return logger_instance
 
 def now():
@@ -65,6 +67,11 @@ def mkdir(path, uid):
 	'''
 	os.mkdir(path)
 	os.chown(path, uid, -1)
+
+def flush_log_at_shutdown():
+	global logger_instance
+	if logger_instance != None:
+		logging.shutdown()
 
 def will_update_last_run_time():
 	update_last_run_timestamp = True

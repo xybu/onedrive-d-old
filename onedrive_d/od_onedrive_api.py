@@ -391,14 +391,15 @@ class OneDriveAPI:
 				self.threadman.hang_caller()
 		del headers
 
+		self.logger.debug('uploading file "%s".', local_path)
 		# BITS: upload file by blocks
 		source_file = open(local_path, 'rb')
-		fcntl.flock(source_file.fileno(), fcntl.LOCK_EX)
+		fcntl.lockf(source_file, fcntl.LOCK_SH)
 		source_cursor = 0				# start from 0B position
 		while source_cursor < source_size:
 			target_cursor = min(source_cursor + block_size, source_size) - 1
 			data = source_file.read(block_size)
-			self.logger.debug("uploading BITS block %d - %d (total: %d B)", source_cursor, target_cursor, source_size)
+			self.logger.debug("uploading block %d - %d (total: %d B)", source_cursor, target_cursor, source_size)
 
 			while True:
 				try:
@@ -438,7 +439,7 @@ class OneDriveAPI:
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
 
-		fcntl.flock(source_file.fileno(), fcntl.LOCK_UN)
+		fcntl.lockf(source_file, fcntl.LOCK_UN)
 		source_file.close()
 
 		self.logger.debug('BITS upload complete.')
@@ -498,7 +499,42 @@ class OneDriveAPI:
 			except requests.exceptions.ConnectionError:
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
-		
+	
+	def get_by_blocks(self, entry_id, local_path, file_size, block_size):
+		try:
+			f = open(local_path, 'wb')
+		except OSError as e:
+			self.logger.error(e)
+			return False
+		self.logger.debug('download to "' + local_path + '"...')
+		# fcntl.lockf(f, fcntl.LOCK_SH)
+		cursor = 0
+		while cursor < file_size:
+			target = min(cursor + block_size, file_size) - 1
+			self.logger.debug("download block %d - %d (total: %d B)", cursor, target, file_size)
+			while True:
+				try:
+					r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/content', headers = {
+							'Range': 'bytes={0}-{1}'.format(cursor, target)
+						})
+					if r.status_code != requests.codes.ok and r.status_code != requests.codes.partial:
+						ret = r.json()
+						if 'error' in ret and 'code' in ret['error'] and ret['error']['code'] == 'request_token_expired': 
+							raise OneDriveAuthError(ret)
+						else: raise OneDriveAPIException(ret)
+					f.write(r.content)
+					r.close()
+					break
+				except OneDriveAuthError:
+					self.auto_recover_auth_error()
+				except requests.exceptions.ConnectionError:
+					self.logger.info('network connection error.')
+					self.threadman.hang_caller()
+			cursor = target + 1
+		# fcntl.lockf(f, fcntl.LOCK_UN)
+		f.close()
+		return True
+
 	def get(self, entry_id, local_path = None):
 		'''
 		Fetching content of OneNote files will raise OneDriveAPIException: 
@@ -515,6 +551,7 @@ class OneDriveAPI:
 					else: raise OneDriveAPIException(ret)
 				if local_path != None:
 					with open(local_path, 'wb') as f: f.write(r.content)
+					return True
 				else: return r.content
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()

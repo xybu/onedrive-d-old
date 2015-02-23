@@ -40,7 +40,7 @@ class TaskManager:
 				CREATE TABLE IF NOT EXISTS tasks
 				(type TEXT, local_path TEXT, remote_id TEXT, remote_parent_id TEXT,
 				status INT DEFAULT 0, args TEXT, extra_info TEXT, 
-				UNIQUE(local_path) ON CONFLICT REPLACE)
+				UNIQUE(local_path, status) ON CONFLICT REPLACE)
 			''')
 			TaskManager.db_initialized = True
 			self.release_lock()
@@ -60,9 +60,11 @@ class TaskManager:
 		# self.logger.debug('incremented semaphore.')
 	
 	def add_task(self, type, local_path, remote_id = '', remote_parent_id = '', status = 0, args = '', extra_info = ''):
-		print(type + ' ' + local_path)
+		# print(type + ' ' + local_path)
 		self.acquire_lock()
-		self.cursor.execute('INSERT OR REPLACE INTO tasks (type, local_path, remote_id, remote_parent_id, status, args, extra_info) VALUES (?,?,?,?,?,?,?)', 
+		# delete old pending tasks for the file and add the new task at the end
+		self.cursor.execute('DELETE FROM tasks WHERE local_path=? AND status=?', (local_path, status))
+		self.cursor.execute('INSERT INTO tasks (type, local_path, remote_id, remote_parent_id, status, args, extra_info) VALUES (?,?,?,?,?,?,?)', 
 			(type, local_path, remote_id, remote_parent_id, status, args, extra_info)
 		)
 		self.release_lock()
@@ -138,11 +140,10 @@ class EntryManager:
 		if 'size' in obj: size = obj['size']
 		else: size = 0
 		self.acquire_lock()
-		ret = self.cursor.execute(
+		self.cursor.execute(
 			'INSERT OR REPLACE INTO entries (parent_path, name, isdir, remote_id, remote_parent_id, size, client_updated_time, status) VALUES (?,?,?,?,?,?,?,?)',
 			(path, basename, isdir, obj['id'], obj['parent_id'], size, obj['client_updated_time'], ''))
 		self.release_lock()
-		return ret
 	
 	def update_local_path(self, old_path, new_path):
 		path, basename = os.path.split(old_path)
