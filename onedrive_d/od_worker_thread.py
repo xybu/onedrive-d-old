@@ -160,7 +160,7 @@ class WorkerThread(threading.Thread):
 				self.analyze_file_path(local_path, task['remote_id'], entry, local_entries)
 				if entry['name'] in local_entries: local_entries.remove(entry['name'])
 			else:
-				self.logger.warning('skipped file "' + task['local_path'] + '/' + entry['name'] + '" of unsupported type "' + entry['type'] + '".')
+				self.logger.info('skipped file "' + task['local_path'] + '/' + entry['name'] + '" of unsupported type "' + entry['type'] + '".')
 		
 		for ent_name in local_entries:
 			# untouched local files

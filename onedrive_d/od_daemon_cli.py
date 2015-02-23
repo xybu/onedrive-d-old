@@ -42,6 +42,8 @@ class Daemon:
 			self.api.set_access_token(tokens['access_token'])
 			self.api.set_refresh_token(tokens['refresh_token'])
 			self.api.set_user_id(tokens['user_id'])
+		self.root_entry_id = self.api.get_property()['id']
+		self.api.ROOT_ENTRY_ID = self.root_entry_id
 	
 	def test_quota(self):
 		self.logger.info('try getting quota info.')
@@ -54,19 +56,25 @@ class Daemon:
 	
 	def create_inotify_thread(self):
 		od_inotify_thread.INotifyThread.pause_event.clear()
-		self.inotify_thread = od_inotify_thread.INotifyThread()
+		self.inotify_thread = od_inotify_thread.INotifyThread(
+			root_path = self.config.params['ONEDRIVE_ROOT_PATH'], 
+			root_id = self.root_entry_id, 
+			ignore_list = self.config.ignore_list)
 		self.inotify_thread.start()
 
 	def heart_beat(self):
 		self.entrymgr = od_sqlite.EntryManager()
-		root_entry_id = self.api.get_property()['id']
 		while True:
-			self.taskmgr.add_task(**{
-				'type': 'sy',
-				'local_path': self.config.params['ONEDRIVE_ROOT_PATH'], 
-				'remote_id': root_entry_id,
-				'args': 'recursive,'
-			})
+			# self.taskmgr.add_task(**{
+			# 	'type': 'sy',
+			# 	'local_path': self.config.params['ONEDRIVE_ROOT_PATH'], 
+			# 	'remote_id': root_entry_id,
+			# 	'args': 'recursive,'
+			# })
+			self.taskmgr.add_task('sy', 
+				local_path = self.config.params['ONEDRIVE_ROOT_PATH'], 
+				remote_id = self.root_entry_id, 
+				args = 'recursive,')
 			time.sleep(self.config.params['DEEP_SCAN_INTERVAL'])
 			gc.collect()
 	
@@ -97,7 +105,7 @@ class Daemon:
 	def start(self):
 		gc.enable()
 		try:
-			self.logger.info('daemon started.')
+			self.logger.debug('daemon started.')
 			# do not check root path because it is checked in config
 			self.load_token()
 			# self.test_quota()

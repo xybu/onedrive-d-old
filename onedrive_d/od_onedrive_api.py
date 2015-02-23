@@ -59,7 +59,10 @@ class OneDriveAuthError(OneDriveAPIException):
 	Raised when authentication fails.
 	'''
 	pass
-	
+
+class OneDriveServerInternalError(OneDriveAPIException):
+	pass
+
 class OneDriveValueError(OneDriveAPIException): 
 	'''
 	Raised when input to OneDriveAPI is invalid.
@@ -76,6 +79,7 @@ class OneDriveAPI:
 	API_URI = 'https://apis.live.net/v5.0/'
 	FOLDER_TYPES = ['folder', 'album']
 	UNSUPPORTED_TYPES = ['notebook']
+	ROOT_ENTRY_ID = 'me/skydrive'
 	
 	def __init__(self, client_id, client_secret, client_scope = CLIENT_SCOPE, redirect_uri = REDIRECT_URI):
 		self.client_access_token = None
@@ -91,9 +95,12 @@ class OneDriveAPI:
 	def parse_response(self, request, error, ok_status = requests.codes.ok):
 		ret = request.json()
 		if request.status_code != ok_status:
-			if 'code' in ret['error'] and ret['error']['code'] == 'request_token_expired':
-				raise OneDriveAuthError(ret)
-			else: raise error(ret)
+			if 'code' in ret['error']:
+				if ret['error']['code'] == 'request_token_expired':
+					raise OneDriveAuthError(ret)
+				elif ret['error']['code'] == 'server_internal_error':
+					raise OneDriveServerInternalError(ret)
+			raise error(ret)
 		return ret
 	
 	def auto_recover_auth_error(self):
@@ -212,7 +219,7 @@ class OneDriveAPI:
 				self.threadman.hang_caller()
 	
 	def get_root_entry_name(self):
-		return 'me/skydrive'
+		return self.ROOT_ENTRY_ID
 	
 	def get_property(self, entry_id = 'me/skydrive'):
 		try:
@@ -278,6 +285,9 @@ class OneDriveAPI:
 			except requests.exceptions.ConnectionError:
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
+			except OneDriveServerInternalError as e:
+				self.logger.error(e)
+				self.threadman.hang_caller()
 	
 	def list_shared_entries(self, user_id = 'me'):	
 		return self.list_entries(user_id + '/skydrive', 'shared')
@@ -318,6 +328,9 @@ class OneDriveAPI:
 				self.auto_recover_auth_error()
 			except requests.exceptions.ConnectionError:
 				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
+			except OneDriveServerInternalError as e:
+				self.logger.error(e)
 				self.threadman.hang_caller()
 	
 	def mv(self, target_id, dest_folder_id, overwrite = True):
@@ -499,6 +512,9 @@ class OneDriveAPI:
 			except requests.exceptions.ConnectionError:
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
+			except OneDriveServerInternalError as e:
+				self.logger.error(e)
+				self.threadman.hang_caller()
 	
 	def get_by_blocks(self, entry_id, local_path, file_size, block_size):
 		try:
@@ -558,6 +574,9 @@ class OneDriveAPI:
 			except requests.exceptions.ConnectionError:
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
+			except OneDriveServerInternalError as e:
+				self.logger.error(e)
+				self.threadman.hang_caller()
 	
 	def rm(self, entry_id):
 		'''
@@ -569,6 +588,9 @@ class OneDriveAPI:
 				return
 			except requests.exceptions.ConnectionError:
 				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
+			except OneDriveServerInternalError as e:
+				self.logger.error(e)
 				self.threadman.hang_caller()
 	
 	def get_user_info(self, user_id = 'me'):

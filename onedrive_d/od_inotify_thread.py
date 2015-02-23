@@ -13,12 +13,14 @@ class INotifyThread(threading.Thread):
 
 	pause_event = threading.Event()
 
-	def __init__(self):
+	def __init__(self, root_path, root_id, ignore_list):
 		super().__init__()
 		self.name = 'inotify'
 		self.daemon = True
 		self.running = True
-		self.config = od_glob.get_config_instance()
+		self.root_path = root_path + '/'
+		self.root_id = root_id
+		self.ignore_list = ignore_list
 		self.logger = od_glob.get_logger()
 
 	def stop(self):
@@ -29,7 +31,8 @@ class INotifyThread(threading.Thread):
 		if INotifyThread.pause_event.is_set(): return
 
 		path, event, name = row
-		if self.config.ignore_list.is_ignorable(name, path):
+		
+		if self.ignore_list.is_ignorable(name, path):
 			# if the file / dir is in ignore list, skip it
 			self.logger.debug('ignored "%s%s".', path, name)
 			return
@@ -41,16 +44,25 @@ class INotifyThread(threading.Thread):
 			# sync its parent without recursion
 			if parent_entry != None:
 				self.sync_path(path, parent_entry)
+			elif path == self.root_path:
+				self.sync_root()
 			else:
 				self.logger.info('path "%s" is not indexed.', path)
 		elif 'MOVED_TO' in event:
 			self.logger.debug(row)
+			parent_entry_id = None
 			if parent_entry == None:
-				self.logger.info('did not find entry for dir "%s".', path)
-				return
+				if path == self.root_path:
+					parent_entry_id = self.root_id
+				else:
+					self.logger.info('did not find entry for dir "%s".', path)
+					return
+			else:
+				parent_entry_id = parent_entry['remote_id']
 			isdir = 'ISDIR' in event
-			self.entrymgr.update_moved_entry_if_exists(isdir, path + name, parent_entry['remote_id'])
-			self.sync_path(path, parent_entry)
+			self.entrymgr.update_moved_entry_if_exists(isdir, path + name, parent_entry_id)
+			if parent_entry != None: self.sync_path(path, parent_entry)
+			else: self.sync_root()
 		elif 'MOVED_FROM' in event:
 			# if the OS changes mtime attribute on moving, then MOVED_TO will 
 			# be reduced to an upload task.
@@ -69,6 +81,8 @@ class INotifyThread(threading.Thread):
 					remote_parent_id = target_entry['remote_parent_id'])
 			elif parent_entry != None:
 				self.sync_path(path, parent_entry)
+			elif path == self.root_path:
+				self.sync_root()
 			else:
 				self.logger.info('deleted file "%s" and its parent are not indexed.', path + name)
 		elif 'CREATE,ISDIR' == event:
@@ -85,6 +99,9 @@ class INotifyThread(threading.Thread):
 			# Better wait until a deep sync. 
 			pass
 
+	def sync_root(self):
+		self.taskmgr.add_task('sy', self.root_path[:-1], self.root_id, '')
+
 	def sync_path(self, path, entry, args=''):
 		self.taskmgr.add_task('sy', path[:-1], 
 			remote_id = entry['remote_id'], 
@@ -97,7 +114,7 @@ class INotifyThread(threading.Thread):
 			self.logger.critical('`inotifywait` was not found. Skip module.')
 			return
 
-		inotify_args = ['inotifywait', '-e', 'unmount,close_write,delete,move,isdir', '-cmr', self.config.params['ONEDRIVE_ROOT_PATH']]
+		inotify_args = ['inotifywait', '-e', 'unmount,close_write,delete,move,isdir', '-cmr', self.root_path]
 		# if len(self.config.ignore_list.ignore_names) > 0:
 		# 	ignore_list = []
 		# 	for item in self.config.ignore_list.ignore_names:
