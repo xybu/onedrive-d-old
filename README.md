@@ -1,7 +1,7 @@
 onedrive-d
 ==========
 
-**FUTURE VERSION. DO NOT TRY.**
+A Microsoft OneDrive desktop client / daemon on Linux.
 
 ## Installation
 
@@ -25,6 +25,8 @@ rm -rfv ~/.onedrive
 git clone https://github.com/xybu/onedrive-d.git
 cd onedrive-d
 ```
+
+Or you can browse https://github.com/xybu/onedrive-d and download the ZIP file manually.
 
 (3) Pre-requisites
 
@@ -80,6 +82,8 @@ cp ./onedrive_d/res/default_ignore.ini ~/.onedrive/ignore_v2.ini
 Now you can run the program by commands
 
 ```bash
+# assume you are in "onedrive-d" folder that contains "onedrive_d" folder.
+
 # equivalent to `onedrive-pref` command
 python3 -m onedrive_d.od_pref
 
@@ -93,18 +97,23 @@ Note that the commands above are no longer valid after installing the package to
 
 Refer to step 1 of section "Installation".
 
-## Data Integrity
+## Notes for Users
+
+### Data Integrity
 
  * Files and directories "deleted" locally can be found in Trash.
  * Files and directories "deleted" remotely can be found in OneDrive recycle bin.
  * Files overwritten remotely can be recovered by OneDrive file version feature.
  * onedrive-d only performs overwriting when it is 100% sure one file is older than its local/remote counterpart.
 
-## Multi-Threading
+### Uploading / Downloading by Blocks
 
-The jobs of threads of main program are planned as follows:
+When file size exceeds an amount (e.g., 8 MiB), onedrive-d will choose to upload / download it by blocks of smaller size (e.g., 512 KiB). This results in smaller cost (thus better reliability) when recovering from network failures, but more HTTP requests may slow down the process. Treak the parameters to best fit your network condition.
 
- * `MainThread`: if GUI is enabled, for GUI responsiveness; 
-   for CLI case, used for heart-beating.
- * `thread_manager`: checking network condition if any other threads are put to sleep
-   under its queue, and when network _seems_ fine wake up the threads; blocked otherwise.
+### Copying and Moving Files and Folders
+
+Because the various behaviors of file managers on Linux, it is hard to determine what actions a user performed based on the log of `inotifywait`. We adopt a very conservative strategy to judge if a file is moved within local OneDrive folder. In most cases file moving results in removing the old path and uploading to the new path. This kinds of wastes network traffic.
+
+Most file managers, including `cp` command, do not copy file attributes like mtime. `inotifywait` reports file writing on copy completion. This makes it infeasible to check if the file writing is a "copy" action. As a result, file copying is also treated as uploading.
+
+Things are even worse when one copies / moves a directory. In most cases the mtime attribute will be changed, resulting in onedrive-d uploading the whole folder.

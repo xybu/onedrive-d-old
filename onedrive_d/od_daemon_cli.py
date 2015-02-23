@@ -1,8 +1,10 @@
 #!/usr/bin/python3
 
 import os
+import gc
 import sys
 import time
+import atexit
 import threading
 from . import od_glob
 from . import od_onedrive_api
@@ -16,6 +18,10 @@ class Daemon:
 		self.logger = od_glob.get_logger()
 		self.config = od_glob.get_config_instance()
 		self.api = od_onedrive_api.get_instance()
+		self.taskmgr = None
+		self.entrymgr = None
+		self.inotify_thread = None
+		atexit.register(self.cleanup)
 	
 	def load_token(self):
 		tokens = self.config.get_access_token()
@@ -42,11 +48,17 @@ class Daemon:
 		print(self.api.get_quota())
 	
 	def create_workers(self):
+		self.taskmgr = od_sqlite.TaskManager()
 		for i in range (0, self.config.params['NUM_OF_WORKERS']):
 			od_worker_thread.WorkerThread().start()
 	
+	def create_inotify_thread(self):
+		od_inotify_thread.INotifyThread.pause_event.clear()
+		self.inotify_thread = od_inotify_thread.INotifyThread()
+		self.inotify_thread.start()
+
 	def heart_beat(self):
-		self.taskmgr = od_sqlite.TaskManager()
+		self.entrymgr = od_sqlite.EntryManager()
 		root_entry_id = self.api.get_property()['id']
 		while True:
 			self.taskmgr.add_task(**{
@@ -56,8 +68,34 @@ class Daemon:
 				'args': 'recursive,'
 			})
 			time.sleep(self.config.params['DEEP_SCAN_INTERVAL'])
+			gc.collect()
 	
+	def cleanup(self):
+		self.logger.debug('cleaning up.')
+		if self.entrymgr != None:
+			self.entrymgr.del_unvisited_entries()
+			self.entrymgr.close()
+		if self.inotify_thread != None:
+			self.inotify_thread.stop()
+			self.inotify_thread.join()
+		if self.taskmgr != None:
+			self.taskmgr.clean_tasks()
+			workers = []
+			while not od_worker_thread.WorkerThread.worker_list.empty():
+				t = od_worker_thread.WorkerThread.worker_list.get()
+				t.stop()
+				workers.append(t)
+				od_worker_thread.WorkerThread.worker_list.task_done()
+			for w in workers:
+				# self.taskmgr.inc_sem()
+				self.taskmgr.inc_sem()
+			for w in workers:
+				w.join()
+		if self.taskmgr != None:
+			self.taskmgr.close()
+
 	def start(self):
+		gc.enable()
 		try:
 			self.logger.info('daemon started.')
 			# do not check root path because it is checked in config
@@ -65,12 +103,11 @@ class Daemon:
 			# self.test_quota()
 			od_glob.will_update_last_run_time()
 			self.create_workers()
+			self.create_inotify_thread()
 			self.heart_beat()
 		except KeyboardInterrupt:
-			
-
 			# for debugging, dump task db
-			# print('SQLite TaskManager Dump:')
-			# for line in self.taskmgr.dump():
-			# 	print(line)
+			print('SQLite TaskManager Dump:')
+			for line in self.taskmgr.dump():
+				print(line)
 			sys.exit(0)

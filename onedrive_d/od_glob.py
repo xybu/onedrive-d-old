@@ -17,7 +17,6 @@ from . import od_ignore_list
 config_instance = None
 logger_instance = None
 update_last_run_timestamp = False
-logging_level = None
 
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S%z'
 APP_CLIENT_ID = '000000004010C916'
@@ -86,10 +85,10 @@ class ConfigSet:
 
 	params = {
 		'NETWORK_ERROR_RETRY_INTERVAL': 10, # in seconds
-		'DEEP_SCAN_INTERVAL': 30, # in seconds
-		'NUM_OF_WORKERS': 3,
+		'DEEP_SCAN_INTERVAL': 60, # in seconds
+		'NUM_OF_WORKERS': 4,
 		'BITS_FILE_MIN_SIZE': 8388608, # files > 8 MiB will be uploaded with BITS API
-		'BITS_BLOCK_SIZE': 1048576, # 1 MiB per block for BITS API
+		'BITS_BLOCK_SIZE': 524288, # 1 MiB per block for BITS API
 		'ONEDRIVE_ROOT_PATH': None,
 		'ONEDRIVE_TOKENS': None,
 		'ONEDRIVE_TOKENS_EXP': None,
