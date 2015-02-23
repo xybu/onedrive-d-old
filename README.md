@@ -5,7 +5,7 @@ A Microsoft OneDrive desktop client / daemon on Linux.
 
 ## Installation
 
-Steps 1, 2, and 5 need to be done manually. For steps 3 and 4, there is a script file `install.sh` which run the commands automatically.
+Steps 1, 2, and 5 need to be done manually. For steps 3 and 4, the script file `install.sh` will handle the work automatically.
 
 (1) Always uninstall older versions before installing newer ones
 
@@ -35,7 +35,7 @@ for most Unix filesystems.
 
 onedrive-d requires Python3 intepreter. If Python version is older than 3.4, `python3-pip` is also required.
 
-For GUI component to work, Python3 binding of GObject (`python3-gi` package for Debian/Ubuntu, `pygobject3` for Fedora, `python-gobject` for Arch, and `python3-gobject` for OpenSUSE) is needed. (Refer to this article if you want to build PyGObject from source.)[https://python-gtk-3-tutorial.readthedocs.org/en/latest/install.html]
+For GUI component to work, Python3 binding of GObject (`python3-gi` package for Debian/Ubuntu, `pygobject3` for Fedora, `python-gobject` for Arch, and `python3-gobject` for OpenSUSE) is needed. [Refer to this article if you want to build PyGObject from source.](https://python-gtk-3-tutorial.readthedocs.org/en/latest/install.html)
 
 Another recommended package is `inotify-tools` (for most package managers), which contains command `inotifywait`. If this command is available on the system, the real-time file system monitoring thread will be enabled. Otherwise the synchronization is performed every certain amount of time (configurable).
 
