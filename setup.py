@@ -2,11 +2,16 @@
 
 import os
 from setuptools import setup, find_packages
+from pip.req import parse_requirements
 
 try:
-	readme = open(os.path.join(os.path.dirname(__file__), '/../README.md')).read()
+	with open(os.path.join(os.path.dirname(__file__), '..', 'README.md')) as f:
+		readme = f.read()
 except IOError:
 	readme = 'Please read README.md for more details'
+
+requirements = parse_requirements('requirements.txt')
+requirements = [str(r.req) for r in requirements]
 
 setup(
 	name='onedrive-d',
@@ -14,8 +19,10 @@ setup(
 	author='Xiangyu Bu',
 	author_email='xybu92@live.com',
 	license='GPLv3',
-	keywords=['onedrive', 'microsoft', 'daemon', 'live', 'liveconnect',
-		'cloud', 'storage', 'storage provider', 'file hosting', 'skydrive'],
+	keywords=[
+		'onedrive', 'microsoft', 'daemon', 'live', 'liveconnect',
+		'cloud', 'storage', 'storage provider', 'file hosting', 'skydrive'
+	],
 	url='http://github.com/xybu/onedrive-d',
 	description='A Microsoft OneDrive Desktop client program for Linux.',
 	long_description=readme,
@@ -36,16 +43,19 @@ setup(
 		'Topic :: System :: Archiving',
 		'Topic :: System :: Filesystems',
 		'Topic :: Utilities'],
-	
-	install_requires = ['requests', 'urllib3', 'certifi', 'send2trash'],
-	
+
+	install_requires=requirements,
+
 	packages=find_packages(),
 	include_package_data=True,
 	package_data={'onedrive_d': ['res/*.png', 'res/*.ini']},
 	#scripts=['daemon/onedrive-daemon','daemon/onedrive-utils'],
 	exclude_package_data={'': ['README.*']},
 
-	entry_points = dict(console_scripts=[
-		'onedrive-d = onedrive_d.od_main:main', 
-		'onedrive-pref = onedrive_d.od_pref:main'])
+	entry_points={
+		'console_scripts': [
+			'onedrive-d = onedrive_d.od_main:main',
+			'onedrive-pref = onedrive_d.od_pref:main'
+		]
+	}
 )
