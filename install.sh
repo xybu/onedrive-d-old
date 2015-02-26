@@ -6,7 +6,8 @@ set -e
 set -u
 
 do_clean() {
-	sudo rm -rf temp onedrive_d/temp build onedrive_d/build dist onedrive_d/dist *.egg-info onedrive_d/*.egg-info setup.cfg onedrive_d/setup.cfg onedrive_d/__pycache__
+	sudo rm -rf temp onedrive_d/temp build onedrive_d/build dist onedrive_d/dist *.egg-info \
+	    onedrive_d/*.egg-info setup.cfg onedrive_d/setup.cfg onedrive_d/__pycache__
 }
 
 # Workaround to support more distros
@@ -77,7 +78,8 @@ if [ ! -x "$(which pip3)" ] ; then
 	if [ "$?" -ne 0 ] ; then
 		echo -e "\033[31mNotice: it seems failed installing pip3 from package repository.\e[0m"
 		echo -e "\e[96mInstall pip3 from source...\e[0m"
-		wget https://bootstrap.pypa.io/get-pip.py && sudo python3 get-pip.py && rm get-pip.py && echo -e "\e[92mpip3 installed...OK\e[0m"
+		wget https://bootstrap.pypa.io/get-pip.py && sudo python3 get-pip.py \
+		    && rm get-pip.py && echo -e "\e[92mpip3 installed...OK\e[0m"
 	fi
 else
 	echo -e "\e[92mpip3 installed...OK\e[0m"
