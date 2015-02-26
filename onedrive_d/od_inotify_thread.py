@@ -138,7 +138,7 @@ class INotifyThread(threading.Thread):
 		self.logger.debug('exit while loop.')
 		self.subp.terminate()
 		subprocess.call(['kill', '-9', str(self.subp.pid)])
-		self.taskmgr.close()
+		self.taskmgr = None
 		self.entrymgr.close()
 		self.logger.debug('stopped.')
 

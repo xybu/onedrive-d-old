@@ -25,7 +25,7 @@ class Daemon:
 	
 	def load_token(self):
 		tokens = self.config.get_access_token()
-		if tokens == None:
+		if tokens is None:
 			self.logger.critical('no user is associated with onedrive-d.')
 			sys.exit(1)
 		elif self.config.is_token_expired():
@@ -80,26 +80,22 @@ class Daemon:
 	
 	def cleanup(self):
 		self.logger.debug('cleaning up.')
-		if self.entrymgr != None:
+		if self.entrymgr is not None:
 			self.entrymgr.del_unvisited_entries()
 			self.entrymgr.close()
-		if self.inotify_thread != None:
+		if self.inotify_thread is not None:
 			self.inotify_thread.stop()
 			self.inotify_thread.join()
-		if self.taskmgr != None:
+		if self.taskmgr is not None:
 			self.taskmgr.clean_tasks()
-			workers = []
-			while not od_worker_thread.WorkerThread.worker_list.empty():
-				t = od_worker_thread.WorkerThread.worker_list.get()
-				t.stop()
-				workers.append(t)
-				od_worker_thread.WorkerThread.worker_list.task_done()
-			for w in workers:
-				# self.taskmgr.inc_sem()
+			od_worker_thread.WorkerThread.worker_lock.acquire()
+			for w in od_worker_thread.WorkerThread.worker_list:
+				w.stop()
+			for w in od_worker_thread.WorkerThread.worker_list:
 				self.taskmgr.inc_sem()
-			for w in workers:
+			for w in od_worker_thread.WorkerThread.worker_list:
 				w.join()
-		if self.taskmgr != None:
+			od_worker_thread.WorkerThread.worker_lock.release()
 			self.taskmgr.close()
 
 	def start(self):

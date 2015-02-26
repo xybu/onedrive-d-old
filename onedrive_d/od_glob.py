@@ -21,7 +21,7 @@ update_last_run_timestamp = False
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S%z'
 APP_CLIENT_ID = '000000004010C916'
 APP_CLIENT_SECRET = 'PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi'
-APP_VERSION = '1.0-dev'
+APP_VERSION = '1.1.0dev'
 
 def get_config_instance(force = False, setup_mode = False):
 	global config_instance
@@ -87,8 +87,8 @@ class ConfigSet:
 		'NETWORK_ERROR_RETRY_INTERVAL': 10, # in seconds
 		'DEEP_SCAN_INTERVAL': 60, # in seconds
 		'NUM_OF_WORKERS': 4,
-		'BITS_FILE_MIN_SIZE': 8388608, # files > 8 MiB will be uploaded with BITS API
-		'BITS_BLOCK_SIZE': 524288, # 1 MiB per block for BITS API
+		'BITS_FILE_MIN_SIZE': 4194304, # files > 4 MiB will be uploaded with BITS API
+		'BITS_BLOCK_SIZE': 524288, # 512 KiB per block for BITS API
 		'ONEDRIVE_ROOT_PATH': None,
 		'ONEDRIVE_TOKENS': None,
 		'ONEDRIVE_TOKENS_EXP': None,
@@ -171,7 +171,7 @@ class ConfigSet:
 			with open(self.APP_CONF_FILE, 'w') as f:
 				json.dump(self.params, f)
 			os.chown(self.APP_CONF_FILE, self.OS_USER_ID, -1)
-			get_logger().info('config saved.')
+			get_logger().debug('config saved.')
 		except:
-			get_logger().info('failed to dump config to file "' + self.APP_CONF_FILE + '".')
+			get_logger().warning('failed to dump config to file "' + self.APP_CONF_FILE + '".')
 	
