@@ -12,8 +12,9 @@ from . import od_sqlite
 from . import od_inotify_thread
 from . import od_worker_thread
 
+
 class Daemon:
-	
+
 	def __init__(self):
 		self.logger = od_glob.get_logger()
 		self.config = od_glob.get_config_instance()
@@ -22,7 +23,7 @@ class Daemon:
 		self.entrymgr = None
 		self.inotify_thread = None
 		atexit.register(self.cleanup)
-	
+
 	def load_token(self):
 		tokens = self.config.get_access_token()
 		if tokens is None:
@@ -44,22 +45,22 @@ class Daemon:
 			self.api.set_user_id(tokens['user_id'])
 		self.root_entry_id = self.api.get_property()['id']
 		self.api.ROOT_ENTRY_ID = self.root_entry_id
-	
+
 	def test_quota(self):
 		self.logger.info('try getting quota info.')
 		print(self.api.get_quota())
-	
+
 	def create_workers(self):
 		self.taskmgr = od_sqlite.TaskManager()
-		for i in range (0, self.config.params['NUM_OF_WORKERS']):
+		for i in range(0, self.config.params['NUM_OF_WORKERS']):
 			od_worker_thread.WorkerThread().start()
-	
+
 	def create_inotify_thread(self):
 		od_inotify_thread.INotifyThread.pause_event.clear()
 		self.inotify_thread = od_inotify_thread.INotifyThread(
-			root_path = self.config.params['ONEDRIVE_ROOT_PATH'], 
-			root_id = self.root_entry_id, 
-			ignore_list = self.config.ignore_list)
+			root_path=self.config.params['ONEDRIVE_ROOT_PATH'],
+			root_id=self.root_entry_id,
+			ignore_list=self.config.ignore_list)
 		self.inotify_thread.start()
 
 	def heart_beat(self):
@@ -67,17 +68,17 @@ class Daemon:
 		while True:
 			# self.taskmgr.add_task(**{
 			# 	'type': 'sy',
-			# 	'local_path': self.config.params['ONEDRIVE_ROOT_PATH'], 
+			# 	'local_path': self.config.params['ONEDRIVE_ROOT_PATH'],
 			# 	'remote_id': root_entry_id,
 			# 	'args': 'recursive,'
 			# })
-			self.taskmgr.add_task('sy', 
-				local_path = self.config.params['ONEDRIVE_ROOT_PATH'], 
-				remote_id = self.root_entry_id, 
-				args = 'recursive,')
+			self.taskmgr.add_task('sy',
+				local_path=self.config.params['ONEDRIVE_ROOT_PATH'],
+				remote_id=self.root_entry_id,
+				args='recursive,')
 			time.sleep(self.config.params['DEEP_SCAN_INTERVAL'])
 			gc.collect()
-	
+
 	def cleanup(self):
 		self.logger.debug('cleaning up.')
 		if self.entrymgr is not None:
