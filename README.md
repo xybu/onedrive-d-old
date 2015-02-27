@@ -1,9 +1,9 @@
 onedrive-d
 ==========
 
-A Microsoft OneDrive desktop client / daemon on Linux.
+A Microsoft OneDrive desktop client / daemon on Linux, written in Python 3.
 
-## Installation
+## Install
 
 Steps 1, 2, and 5 need to be done manually. For steps 3 and 4, the script file `install.sh` will handle the work automatically.
 
@@ -93,7 +93,7 @@ python3 -m onedrive_d.od_main
 
 Note that the commands above are no longer valid after installing the package to the system.
 
-## Removal
+## Remove
 
 Refer to step 1 of section "Installation".
 
@@ -108,7 +108,7 @@ Refer to step 1 of section "Installation".
 
 ### Uploading / Downloading by Blocks
 
-When file size exceeds an amount (e.g., 8 MiB), onedrive-d will choose to upload / download it by blocks of smaller size (e.g., 512 KiB). This results in smaller cost (thus better reliability) when recovering from network failures, but more HTTP requests may slow down the process. Treak the parameters to best fit your network condition.
+When file size exceeds an amount (e.g., 8 MiB), onedrive-d will choose to upload / download it by blocks of smaller size (e.g., 512 KiB). This results in smaller cost (thus better reliability) when recovering from network failures, but more HTTP requests may slow down the process. Tweak the parameters to best fit your network condition.
 
 ### Copying and Moving Files and Folders
 
