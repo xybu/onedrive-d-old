@@ -49,7 +49,7 @@ setup(
 	packages=find_packages(),
 	include_package_data=True,
 	package_data={'onedrive_d': ['res/*.png', 'res/*.ini']},
-	#scripts=['daemon/onedrive-daemon','daemon/onedrive-utils'],
+	# scripts=['daemon/onedrive-daemon','daemon/onedrive-utils'],
 	exclude_package_data={'': ['README.*']},
 
 	entry_points={
