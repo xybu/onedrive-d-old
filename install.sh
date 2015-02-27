@@ -10,6 +10,8 @@ do_clean() {
 	    onedrive_d/*.egg-info setup.cfg onedrive_d/setup.cfg onedrive_d/__pycache__
 }
 
+CURRENT_USER=$(whoami)
+
 # Workaround to support more distros
 LSB_RELEASE_BIN=$(whereis lsb-release | cut -d' ' -f2)
 OS_RELEASE_BIN=$(whereis os-release | cut -d' ' -f2)
@@ -108,6 +110,9 @@ do_clean
 rm -rf ~/.onedrive
 mkdir ~/.onedrive
 cp ./onedrive_d/res/default_ignore.ini ~/.onedrive/ignore_v2.ini
+
+sudo touch /var/log/onedrive_d.log
+sudo chown $CURRENT_USER /var/log/onedrive_d.log
 
 echo -e "\e[92monedrive-d installed successfully.\e[0m"
 echo -e "\e[92mPlease run command \`onedrive-pref\` to set up the program.\e[0m"

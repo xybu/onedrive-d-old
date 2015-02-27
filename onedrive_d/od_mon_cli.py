@@ -4,6 +4,7 @@ import os
 import gc
 import sys
 import time
+import signal
 import atexit
 import threading
 from . import od_glob
@@ -13,7 +14,7 @@ from . import od_inotify_thread
 from . import od_worker_thread
 
 
-class Daemon:
+class Monitor:
 
 	def __init__(self):
 		self.logger = od_glob.get_logger()
@@ -23,6 +24,7 @@ class Daemon:
 		self.entrymgr = None
 		self.inotify_thread = None
 		atexit.register(self.cleanup)
+		signal.signal(signal.SIGTERM, self.stop)
 
 	def load_token(self):
 		tokens = self.config.get_access_token()
@@ -84,35 +86,36 @@ class Daemon:
 		if self.entrymgr is not None:
 			self.entrymgr.del_unvisited_entries()
 			self.entrymgr.close()
+			self.logger.debug('entry manager closed.')
 		if self.inotify_thread is not None:
 			self.inotify_thread.stop()
 			self.inotify_thread.join()
+			self.logger.debug('inotify thread stopped.')
 		if self.taskmgr is not None:
 			self.taskmgr.clean_tasks()
+			self.logger.debug('task queue cleaned.')
 			od_worker_thread.WorkerThread.worker_lock.acquire()
 			for w in od_worker_thread.WorkerThread.worker_list:
 				w.stop()
 			for w in od_worker_thread.WorkerThread.worker_list:
 				self.taskmgr.inc_sem()
 			for w in od_worker_thread.WorkerThread.worker_list:
+				self.logger.debug('waiting for thread %s.', w.name)
 				w.join()
 			od_worker_thread.WorkerThread.worker_lock.release()
 			self.taskmgr.close()
 
 	def start(self):
 		gc.enable()
-		try:
-			self.logger.debug('daemon started.')
-			# do not check root path because it is checked in config
-			self.load_token()
-			# self.test_quota()
-			od_glob.will_update_last_run_time()
-			self.create_workers()
-			self.create_inotify_thread()
-			self.heart_beat()
-		except KeyboardInterrupt:
-			# for debugging, dump task db
-			print('SQLite TaskManager Dump:')
-			for line in self.taskmgr.dump():
-				print(line)
-			sys.exit(0)
+		self.logger.debug('daemon started.')
+		# do not check root path because it is checked in config
+		self.load_token()
+		# self.test_quota()
+		od_glob.will_update_last_run_time()
+		self.create_workers()
+		self.create_inotify_thread()
+		self.heart_beat()
+
+	def stop(self, sig_num=None, stack_frame=None):
+		self.logger.info('stopping...')
+		sys.exit(0)

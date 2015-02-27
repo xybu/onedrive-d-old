@@ -25,6 +25,9 @@ class INotifyThread(threading.Thread):
 		self.logger = od_glob.get_logger()
 
 	def stop(self):
+		self.subp.terminate()
+		subprocess.call(['kill', '-s', '9', str(self.subp.pid)])
+		self.logger.debug('inotifywait killed.')
 		self.running = False
 
 	def parse_record(self, row):
@@ -145,8 +148,6 @@ class INotifyThread(threading.Thread):
 				# del csv_rows
 
 		self.logger.debug('exit while loop.')
-		self.subp.terminate()
-		subprocess.call(['kill', '-9', str(self.subp.pid)])
 		self.taskmgr = None
 		self.entrymgr.close()
 		self.logger.debug('stopped.')

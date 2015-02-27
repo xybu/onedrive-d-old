@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 
-class Daemon:
+class Monitor:
 
 	def __init__(self):
 		raise NotImplementedError('od_daemon_gtk is not implemented yet.')
