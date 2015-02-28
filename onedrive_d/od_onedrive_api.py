@@ -32,7 +32,7 @@ api_instance = None
 
 def get_instance():
 	global api_instance
-	if api_instance == None:
+	if api_instance is None:
 		api_instance = OneDriveAPI(od_glob.APP_CLIENT_ID, od_glob.APP_CLIENT_SECRET)
 	return api_instance
 
@@ -41,7 +41,7 @@ class OneDriveAPIException(Exception):
 
 	def __init__(self, args=None):
 		super().__init__()
-		if args == None:
+		if args is None:
 			pass
 		elif 'error_description' in args:
 			self.errno = args['error']
@@ -113,7 +113,7 @@ class OneDriveAPI:
 		return ret
 
 	def auto_recover_auth_error(self):
-		if self.client_refresh_token == None:
+		if self.client_refresh_token is None:
 			raise OneDriveAuthError()
 		refreshed_token_set = self.refresh_token(self.client_refresh_token)
 		od_glob.get_config_instance().set_access_token(refreshed_token_set)
@@ -139,7 +139,7 @@ class OneDriveAPI:
 		return OneDriveAPI.OAUTH_AUTHORIZE_URI + urllib.parse.urlencode(params)
 
 	def is_signed_in(self):
-		return self.access_token != None
+		return self.access_token is not None
 
 	def set_user_id(self, id):
 		self.user_id = id
@@ -158,11 +158,11 @@ class OneDriveAPI:
 		return a dict with keys token_type, expires_in, scope, 
 		access_token, refresh_token, authentication_token
 		"""
-		if uri != None and '?' in uri:
+		if uri is not None and '?' in uri:
 			qs_dict = urllib.parse.parse_qs(uri.split('?')[1])
 			if 'code' in qs_dict:
 				code = qs_dict['code']
-		if code == None:
+		if code is None:
 			raise OneDriveValueError(
 				{'error': 'access_code_not_found', 'error_description': 'The access code is not specified.'})
 
@@ -332,7 +332,7 @@ class OneDriveAPI:
 		Return an entry dict if opeation succeeds.
 		@param overwrite: whether or not to overwrite an existing entry. True, False, None (ChooseNewName).
 		"""
-		if overwrite == None:
+		if overwrite is None:
 			overwrite = 'ChooseNewName'
 		data = {'destination': dest_folder_id}
 		headers = {
@@ -390,7 +390,7 @@ class OneDriveAPI:
 			user_id = folder_id.split('.')[-1]
 			url = "https://cid-" + user_id + \
 				".users.storage.live.com/users/0x" + user_id + "/LiveFolders/" + name
-		# elif remote_path != None:
+		# elif remote_path is not None:
 		# 	url = "https://cid-" + user_id + ".users.storage.live.com/users/0x" + user_id + "/LiveFolders/" + remote_path
 		else:
 			self.logger.error("cannot request BITS. folder_id is invalid.")
@@ -502,7 +502,7 @@ class OneDriveAPI:
 		Another issue is timestamp correction.
 		"""
 		uri = OneDriveAPI.API_URI
-		if upload_location != None:
+		if upload_location is not None:
 			uri += upload_location  # already ends with '/'
 		else:
 			uri += folder_id + '/files/'
@@ -518,9 +518,9 @@ class OneDriveAPI:
 		}
 		uri += '?' + urllib.parse.urlencode(d)
 
-		if data != None:
+		if data is not None:
 			pass
-		elif local_path != None:
+		elif local_path is not None:
 			if not os.path.isfile(local_path):
 				raise OneDriveValueError(
 					{'error': 'wrong_file_type', 'error_description': 'The local path "' + local_path + '" is not a file.'})
@@ -602,7 +602,7 @@ class OneDriveAPI:
 						raise OneDriveAuthError(ret)
 					else:
 						raise OneDriveAPIException(ret)
-				if local_path != None:
+				if local_path is not None:
 					with open(local_path, 'wb') as f:
 						f.write(r.content)
 					return True

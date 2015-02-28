@@ -30,7 +30,7 @@ def get_config_instance(force=False, setup_mode=False):
 	# print('My caller is the %r function in a %r class' % (
 	# 	callingframe.f_code.co_name,
 	# 	callingframe.f_locals['self'].__class__.__name__))
-	if force or config_instance == None:
+	if force or config_instance is None:
 		config_instance = ConfigSet(setup_mode)
 		atexit.register(dump_config)
 	return config_instance
@@ -38,7 +38,7 @@ def get_config_instance(force=False, setup_mode=False):
 
 def get_logger(level=logging.DEBUG):
 	global logger_instance
-	if logger_instance == None:
+	if logger_instance is None:
 		logging.basicConfig(
 			format='[%(asctime)-15s] %(levelname)s: %(threadName)s: %(message)s')
 		logger_instance = logging.getLogger(__name__)
@@ -80,7 +80,7 @@ def mkdir(path, uid):
 
 def flush_log_at_shutdown():
 	global logger_instance
-	if logger_instance != None:
+	if logger_instance is not None:
 		logging.shutdown()
 
 
@@ -89,9 +89,9 @@ def will_update_last_run_time():
 
 
 def dump_config():
-	if update_last_run_timestamp and config_instance != None:
+	if update_last_run_timestamp and config_instance is not None:
 		config_instance.set_last_run_timestamp()
-	if config_instance != None and config_instance.is_dirty:
+	if config_instance is not None and config_instance.is_dirty:
 		config_instance.dump()
 
 
@@ -115,9 +115,9 @@ class ConfigSet:
 		self.is_dirty = False
 		self.OS_HOSTNAME = os.uname()[1]
 		self.OS_USERNAME = os.getenv('SUDO_USER')
-		if self.OS_USERNAME == None or self.OS_USERNAME == '':
+		if self.OS_USERNAME is None or self.OS_USERNAME == '':
 			self.OS_USERNAME = os.getenv('USER')
-		if self.OS_USERNAME == None or self.OS_USERNAME == '':
+		if self.OS_USERNAME is None or self.OS_USERNAME == '':
 			get_logger().critical('cannot find current logged-in user.')
 			sys.exit(1)
 
@@ -144,7 +144,7 @@ class ConfigSet:
 				get_logger().critical('onedrive-d config file does not exist. Exit.')
 				sys.exit(1)
 
-		if self.params['ONEDRIVE_ROOT_PATH'] == None and not setup_mode:
+		if self.params['ONEDRIVE_ROOT_PATH'] is None and not setup_mode:
 			get_logger().critical('path to local OneDrive repo is not set.')
 			sys.exit(1)
 
@@ -169,7 +169,7 @@ class ConfigSet:
 		self.is_dirty = True
 
 	def get_access_token(self):
-		if self.params['ONEDRIVE_TOKENS'] != None:
+		if self.params['ONEDRIVE_TOKENS'] is not None:
 			return self.params['ONEDRIVE_TOKENS']
 		else:
 			return None
