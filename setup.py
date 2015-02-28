@@ -39,15 +39,12 @@ setup(
 		'Topic :: System :: Archiving',
 		'Topic :: System :: Filesystems',
 		'Topic :: Utilities'],
-
-	install_requires = ['requests', 'urllib3', 'certifi', 'send2trash', 'daemonocle'],
-
+	install_requires=['requests', 'urllib3', 'certifi', 'send2trash', 'daemonocle'],
 	packages=find_packages(),
 	include_package_data=True,
 	package_data={'onedrive_d': ['res/*.png', 'res/*.ini']},
 	# scripts=['daemon/onedrive-daemon','daemon/onedrive-utils'],
 	exclude_package_data={'': ['README.*', 'install.sh']},
-
 	entry_points={
 		'console_scripts': [
 			'onedrive-d = onedrive_d.od_main:main',
