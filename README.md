@@ -15,9 +15,9 @@ Steps 1, 2, and 5 need to be done manually. For steps 3 and 4, the script file `
 
 ```bash
 # To remove onedrive-d < 1.0
-sudo pip uninstall onedrive_d
+sudo pip uninstall onedrive-d
 # To remove onedrive-d >= 1.0
-sudo pip3 uninstall onedrive_d
+sudo pip3 uninstall onedrive-d
 
 # Remove residual config files
 rm -rfv ~/.onedrive
