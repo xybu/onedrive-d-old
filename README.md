@@ -5,7 +5,7 @@ A Microsoft OneDrive desktop client / daemon on Linux, written in Python 3.
 
 ## Note for this branch
 
-This branch experiments with daemonification of onedrive-d process.
+This branch experiments with daemonization of onedrive-d process.
 
 ## Install
 
@@ -89,6 +89,11 @@ do steps 1 to 3 in *Installation* section, and copy config files by
 ```bash
 mkdir ~/.onedrive
 cp ./onedrive_d/res/default_ignore.ini ~/.onedrive/ignore_v2.ini
+
+# Create log file if you need to run onedrive-d as daemon
+sudo touch /var/log/onedrive_d.log
+# you may need to change `whoami` to your username
+sudo chown `whoami` /var/log/onedrive_d.log
 ```
 
 Now you can run the program by commands
