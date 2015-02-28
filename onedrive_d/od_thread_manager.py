@@ -15,7 +15,7 @@ instance = None
 
 def get_instance():
 	global instance
-	if instance == None:
+	if instance is None:
 		instance = NetworkingThreadManager()
 		instance.start()
 	return instance

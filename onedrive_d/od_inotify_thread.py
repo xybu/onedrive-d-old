@@ -44,7 +44,7 @@ class INotifyThread(threading.Thread):
 		if 'CLOSE_WRITE' in event:
 			# the situation is complex. cannot simply upload without knowing its remote status.
 			# sync its parent without recursion
-			if parent_entry != None:
+			if parent_entry is not None:
 				self.sync_path(path, parent_entry)
 			elif path == self.root_path:
 				self.sync_root()
@@ -53,7 +53,7 @@ class INotifyThread(threading.Thread):
 		elif 'MOVED_TO' in event:
 			self.logger.debug(row)
 			parent_entry_id = None
-			if parent_entry == None:
+			if parent_entry is None:
 				if path == self.root_path:
 					parent_entry_id = self.root_id
 				else:
@@ -64,7 +64,7 @@ class INotifyThread(threading.Thread):
 			isdir = 'ISDIR' in event
 			self.entrymgr.update_moved_entry_if_exists(
 				isdir, path + name, parent_entry_id)
-			if parent_entry != None:
+			if parent_entry is not None:
 				self.sync_path(path, parent_entry)
 			else:
 				self.sync_root()
@@ -79,12 +79,12 @@ class INotifyThread(threading.Thread):
 			isdir = 'ISDIR' in event
 			target_entry = self.entrymgr.get_entry(isdir=isdir,
 				local_path=path + name)
-			if target_entry != None:
+			if target_entry is not None:
 				self.taskmgr.add_task('rm' if isdir else 'rf',
 					local_path=path + name,
 					remote_id=target_entry['remote_id'],
 					remote_parent_id=target_entry['remote_parent_id'])
-			elif parent_entry != None:
+			elif parent_entry is not None:
 				self.sync_path(path, parent_entry)
 			elif path == self.root_path:
 				self.sync_root()
@@ -97,7 +97,7 @@ class INotifyThread(threading.Thread):
 			# need to be recursive
 			# For Caja file manager, creating dir results in a sequence of
 			# CREATE_ISDIR, MOVE_FROM, MOVE_TO events.
-			# if parent_entry == None:
+			# if parent_entry is None:
 			#	self.logger.info('did not find entry for dir "%s".', path)
 			#	return
 			#self.sync_path(path, parent_entry)
@@ -115,7 +115,7 @@ class INotifyThread(threading.Thread):
 			args='')
 
 	def run(self):
-		if shutil.which('inotifywait') == None:
+		if shutil.which('inotifywait') is None:
 			# inotifywait is not installed
 			self.logger.critical('`inotifywait` was not found. Skip module.')
 			return
