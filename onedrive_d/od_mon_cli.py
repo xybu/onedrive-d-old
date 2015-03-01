@@ -38,7 +38,7 @@ class Monitor:
 				self.api.auto_recover_auth_error()
 				self.logger.info('successfully refreshed access token.')
 			except Exception as e:
-				self.logger.critical('an unknown error occurred. {}' % e)
+				self.logger.critical(e)
 				sys.exit(1)
 		else:
 			# the token exists and is not expired

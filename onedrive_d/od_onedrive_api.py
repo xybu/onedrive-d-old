@@ -113,6 +113,9 @@ class OneDriveAPI:
 		return ret
 
 	def auto_recover_auth_error(self):
+		"""
+		Note that this function still throws exceptions.
+		"""
 		if self.client_refresh_token == None:
 			raise OneDriveAuthError()
 		refreshed_token_set = self.refresh_token(self.client_refresh_token)
@@ -396,7 +399,12 @@ class OneDriveAPI:
 			self.logger.error("cannot request BITS. folder_id is invalid.")
 			return None
 
-		# self.logger.info(url)
+		# force refresh access token to get largest expiration time
+		try:
+			self.auto_recover_auth_error()
+		except Exception as e:
+			self.logger.error(e)
+			return None
 
 		# BITS: Create-Session
 		headers = {
@@ -405,20 +413,22 @@ class OneDriveAPI:
 			'BITS-Packet-Type': 'Create-Session',
 			'BITS-Supported-Protocols': '{7df0354d-249b-430f-820d-3d2a9bef4931}'
 		}
-
+		self.logger.debug('getting session token for BITS upload...')
 		while True:
 			try:
 				response = self.http_client.request('post', url, headers=headers)
-				if response.status_code == 401:
-					response.close()
-					raise OneDriveAuthError()
-				elif response.status_code != 201:
-					# probably unrecoverable error
-					self.logger.error(response.headers)
-					self.logger.error("failed BITS Create-Session request to upload \"" +
-					                  local_path + "\". Status code: %d", response.status_code)
-					response.close()
-					return None
+				if response.status_code != 201:
+					if 'www-authenticate' in response.headers and 'invalid_token' in response.headers['www-authenticate']:
+						response.close()
+						raise OneDriveAuthError()
+					else:
+						# unknown error should be further analyzed
+						self.logger.debug("failed BITS Create-Session request to upload \"%s\". HTTP %d.", local_path, response.status_code)
+						self.logger.debug(response.headers)
+						response.close()
+						fcntl.lockf(source_file, fcntl.LOCK_UN)
+						source_file.close()
+						return None
 				session_id = response.headers['bits-session-id']
 				response.close()
 				break
@@ -429,60 +439,75 @@ class OneDriveAPI:
 				self.threadman.hang_caller()
 		del headers
 
-		self.logger.debug('uploading file "%s".', local_path)
 		# BITS: upload file by blocks
+		# The autnentication of this part relies on session_id, not access_token.
+		self.logger.debug('uploading file "%s".', local_path)
 		source_file = open(local_path, 'rb')
 		fcntl.lockf(source_file, fcntl.LOCK_SH)
-		source_cursor = 0				# start from 0B position
+		source_cursor = 0
 		while source_cursor < source_size:
-			target_cursor = min(source_cursor + block_size, source_size) - 1
-			data = source_file.read(block_size)
-			self.logger.debug("uploading block %d - %d (total: %d B)",
-			                  source_cursor, target_cursor, source_size)
-
-			while True:
-				try:
-					response = self.http_client.request('post', url, data=data, headers={
-						'X-Http-Method-Override': 'BITS_POST',
-						'BITS-Packet-Type': 'Fragment',
-						'BITS-Session-Id': session_id,
-						'Content-Range': 'bytes {}-{}/{}'.format(source_cursor, target_cursor, source_size)
-					})
+			try:
+				target_cursor = min(source_cursor + block_size, source_size) - 1
+				source_file.seek(source_cursor)
+				data = source_file.read(target_cursor - source_cursor + 1)
+				self.logger.debug("uploading block %d - %d (total: %d B)",
+			    	              source_cursor, target_cursor, source_size)
+				response = self.http_client.request('post', url, data=data, headers={
+					'X-Http-Method-Override': 'BITS_POST',
+					'BITS-Packet-Type': 'Fragment',
+					'BITS-Session-Id': session_id,
+					'Content-Range': 'bytes {}-{}/{}'.format(source_cursor, target_cursor, source_size)
+				})
+				if response.status_code != requests.codes.ok:
+					# unknown error. better log it for future analysis
+					self.logger.debug('an error occurred uploading the block. HTTP %d.', response.status_code)
+					self.logger.debug(response.headers)
 					response.close()
-					break
-				except OneDriveAuthError:
-					self.auto_recover_auth_error()
-				except requests.exceptions.ConnectionError:
-					self.logger.info('network connection error.')
-					self.threadman.hang_caller()
-
-			source_cursor = target_cursor + 1
-			del data
+					fcntl.lockf(source_file, fcntl.LOCK_UN)
+					source_file.close()
+					return None
+				else:
+					source_cursor = int(response.headers['bits-received-content-range'])
+					response.close()
+					del data
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				del data
+				self.threadman.hang_caller()
+		fcntl.lockf(source_file, fcntl.LOCK_UN)
+		source_file.close()
 
 		# BITS: close session
+		self.logger.debug('BITS upload completed. Closing session...')
+		headers = {
+			'X-Http-Method-Override': 'BITS_POST',
+			'BITS-Packet-Type': 'Close-Session',
+			'BITS-Session-Id': session_id,
+			'Content-Length': 0
+		}
 		while True:
 			try:
-				response = self.http_client.request('post', url, headers={
-					'X-Http-Method-Override': 'BITS_POST',
-					'BITS-Packet-Type': 'Close-Session',
-					'BITS-Session-Id': session_id,
-					'Content-Length': 0
-				})
+				response = self.http_client.request('post', url, headers=headers)
+				if response.status_code != requests.codes.ok:
+					if 'www-authenticate' in response.headers and 'invalid_token' in response.headers['www-authenticate']:
+						response.close()
+						raise OneDriveAuthError()
+					else:
+						# however, when the token is changed,
+						# we will get HTTP 500 with 'x-clienterrorcode': 'UploadSessionNotFound'
+						self.logger.debug('An error occurred closing BITS session. HTTP %d', response.status_code)
+						self.logger.debug(response.headers)
+						response.close()
+						return None
 				res_id = response.headers['x-resource-id']
-				#updated_time = od_glob.str_to_time(response.headers['x-last-modified-iso8601'])
 				response.close()
-				break
+				self.logger.debug('BITS session successfully closed.')
+				return self.get_property('file.' + res_id[:res_id.index('!')] + '.' + res_id)
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
 			except requests.exceptions.ConnectionError:
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
-
-		fcntl.lockf(source_file, fcntl.LOCK_UN)
-		source_file.close()
-
-		self.logger.debug('BITS upload complete.')
-		return self.get_property('file.' + res_id[:res_id.index('!')] + '.' + res_id)
 
 	def put(self, name, folder_id='me/skydrive', upload_location=None, local_path=None, data=None, overwrite=True):
 		"""
@@ -556,35 +581,41 @@ class OneDriveAPI:
 		except OSError as e:
 			self.logger.error(e)
 			return False
-		self.logger.debug('download to "' + local_path + '"...')
+		self.logger.debug('download file to "' + local_path + '"...')
 		# fcntl.lockf(f, fcntl.LOCK_SH)
 		cursor = 0
 		while cursor < file_size:
-			target = min(cursor + block_size, file_size) - 1
-			self.logger.debug(
-				"download block %d - %d (total: %d B)", cursor, target, file_size)
-			while True:
-				try:
-					r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/content', headers={
-							'Range': 'bytes={0}-{1}'.format(cursor, target)
-						})
-					if r.status_code != requests.codes.ok and r.status_code != requests.codes.partial:
-						ret = r.json()
-						if 'error' in ret and 'code' in ret['error'] and ret['error']['code'] == 'request_token_expired':
-							raise OneDriveAuthError(ret)
-						else:
-							raise OneDriveAPIException(ret)
+			self.logger.debug('current cursor: ' + str(cursor))
+			try:
+				target = min(cursor + block_size, file_size) - 1
+				r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/content', headers={
+						'Range': 'bytes={0}-{1}'.format(cursor, target)
+					})
+				if r.status_code == requests.codes.ok or r.status_code == requests.codes.partial:
+					# sample data: 'bytes 12582912-12927920/12927921'
+					range_unit, range_str = r.headers['content-range'].split(' ')
+					range_range, range_total = range_str.split('/')
+					range_from, range_to = range_range.split('-')
 					f.write(r.content)
+					cursor = int(range_to) + 1
 					r.close()
-					break
-				except OneDriveAuthError:
-					self.auto_recover_auth_error()
-				except requests.exceptions.ConnectionError:
-					self.logger.info('network connection error.')
-					self.threadman.hang_caller()
-			cursor = target + 1
-		# fcntl.lockf(f, fcntl.LOCK_UN)
+				else:
+					if 'www-authenticate' in r.headers and 'invalid_token' in r.headers['www-authenticate']:
+						raise OneDriveAuthError()
+					else:
+						self.logger.debug('failed downloading block. HTTP %d.', r.status_code)
+						self.logger.debug(r.headers)
+						self.logger.debug(r.content)
+						return False
+					# return False
+			except OneDriveAuthError:
+				self.auto_recover_auth_error()
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
 		f.close()
+		self.logger.debug('file saved.')
+		# fcntl.lockf(f, fcntl.LOCK_UN)
 		return True
 
 	def get(self, entry_id, local_path=None):
