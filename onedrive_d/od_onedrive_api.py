@@ -82,27 +82,29 @@ class OneDriveValueError(OneDriveAPIException):
 
 class OneDriveAPI:
 
-	CLIENT_SCOPE = ['wl.skydrive', 'wl.skydrive_update', 'wl.offline_access']
-	REDIRECT_URI = 'https://login.live.com/oauth20_desktop.srf'
-	OAUTH_AUTHORIZE_URI = 'https://login.live.com/oauth20_authorize.srf?'
-	OAUTH_TOKEN_URI = 'https://login.live.com/oauth20_token.srf'
 	OAUTH_SIGNOUT_URI = 'https://login.live.com/oauth20_logout.srf'
 	API_URI = 'https://apis.live.net/v5.0/'
 	FOLDER_TYPES = ['folder', 'album']
 	UNSUPPORTED_TYPES = ['notebook']
 	ROOT_ENTRY_ID = 'me/skydrive'
 
+	client_scope = ['onedrive.readwrite', 'wl.offline_access']
+	client_redirect_uri = 'https://login.live.com/oauth20_desktop.srf'
+	oauth_signin_url = 'https://login.live.com/oauth20_authorize.srf?'
+	oauth_token_url = 'https://login.live.com/oauth20_token.srf'
 	logger = od_glob.get_logger()
 	config = od_glob.get_config_instance()
 	threadman = od_thread_manager.get_instance()
 
-	def __init__(self, client_id, client_secret, client_scope=CLIENT_SCOPE, redirect_uri=REDIRECT_URI):
+	def __init__(self, client_id, client_secret, client_scope=None, redirect_uri=None):
 		self.client_access_token = None
 		self.client_refresh_token = None
 		self.client_id = client_id
 		self.client_secret = client_secret
-		self.client_scope = client_scope
-		self.client_redirect_uri = redirect_uri
+		if client_scope is not None:
+			self.client_scope = client_scope
+		if redirect_uri is not None:
+			self.client_redirect_uri = redirect_uri
 		self.http_client = requests.Session()
 
 	def parse_response(self, request, error, ok_status=requests.codes.ok):
@@ -143,7 +145,7 @@ class OneDriveAPI:
 		}
 		if state != '':
 			params['state'] = state
-		return OneDriveAPI.OAUTH_AUTHORIZE_URI + urllib.parse.urlencode(params)
+		return self.oauth_signin_url + urllib.parse.urlencode(params)
 
 	def is_signed_in(self):
 		return self.access_token is not None
@@ -171,7 +173,7 @@ class OneDriveAPI:
 				code = qs_dict['code']
 		if code is None:
 			raise OneDriveValueError(
-				{'error': 'access_code_not_found', 'error_description': 'The access code is not specified.'})
+				{'error': 'auth_code_not_found', 'error_description': 'The auth code is not specified.'})
 
 		params = {
 			"client_id": self.client_id,
@@ -181,18 +183,17 @@ class OneDriveAPI:
 			"grant_type": "authorization_code"
 		}
 
-		try:
-			request = requests.post(
-				OneDriveAPI.OAUTH_TOKEN_URI, data=params, verify=True)
-			response = self.parse_response(request, OneDriveAPIException)
-			self.set_access_token(response['access_token'])
-			self.set_refresh_token(response['refresh_token'])
-			self.set_user_id(response['user_id'])
-			return response
-		except requests.exceptions.ConnectionError:
-			self.logger.info('network connection error.')
-			self.threadman.hang_caller()
-			return self.get_access_token(code, uri)
+		while True:
+			try:
+				request = requests.post(self.oauth_token_url, data=params, verify=True)
+				response = self.parse_response(request, OneDriveAPIException)
+				self.set_access_token(response['access_token'])
+				self.set_refresh_token(response['refresh_token'])
+				self.set_user_id(response['user_id'])
+				return response
+			except requests.exceptions.ConnectionError:
+				self.logger.info('network connection error.')
+				self.threadman.hang_caller()
 
 	def refresh_token(self, token):
 		params = {
