@@ -39,7 +39,8 @@ setup(
 		'Topic :: System :: Archiving',
 		'Topic :: System :: Filesystems',
 		'Topic :: Utilities'],
-	install_requires=['requests', 'urllib3', 'certifi', 'send2trash', 'daemonocle'],
+	install_requires=[
+		'requests', 'urllib3', 'certifi', 'send2trash', 'daemonocle'],
 	packages=find_packages(),
 	include_package_data=True,
 	package_data={'onedrive_d': ['res/*.png', 'res/*.ini']},

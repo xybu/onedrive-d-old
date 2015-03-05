@@ -15,7 +15,7 @@ instance = None
 
 def get_instance():
 	global instance
-	if instance == None:
+	if instance is None:
 		instance = NetworkingThreadManager()
 		instance.start()
 	return instance
@@ -30,8 +30,7 @@ class NetworkingThreadManager(threading.Thread):
 		self.sleep_queue = queue.Queue()
 		self.conditions = {}
 		self.logger = od_glob.get_logger()
-		self.wait_interval = od_glob.get_config_instance(
-			).params['NETWORK_ERROR_RETRY_INTERVAL']
+		self.wait_interval = od_glob.get_config_instance().params['NETWORK_ERROR_RETRY_INTERVAL']
 
 	def hang_caller(self):
 		"""
@@ -72,4 +71,3 @@ class NetworkingThreadManager(threading.Thread):
 			self.conditions[t.ident].acquire()
 			self.conditions[t.ident].notify()
 			self.conditions[t.ident].release()
-

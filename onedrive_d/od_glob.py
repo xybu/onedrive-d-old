@@ -30,7 +30,7 @@ def get_config_instance(force=False, setup_mode=False):
 	# print('My caller is the %r function in a %r class' % (
 	# 	callingframe.f_code.co_name,
 	# 	callingframe.f_locals['self'].__class__.__name__))
-	if force or config_instance == None:
+	if force or config_instance is None:
 		config_instance = ConfigSet(setup_mode)
 		atexit.register(dump_config)
 	return config_instance
@@ -84,7 +84,7 @@ def mkdir(path, uid):
 
 def flush_log_at_shutdown():
 	global logger_instance
-	if logger_instance != None:
+	if logger_instance is not None:
 		logging.shutdown()
 
 
@@ -93,9 +93,9 @@ def will_update_last_run_time():
 
 
 def dump_config():
-	if update_last_run_timestamp and config_instance != None:
+	if update_last_run_timestamp and config_instance is not None:
 		config_instance.set_last_run_timestamp()
-	if config_instance != None and ConfigSet.is_dirty:
+	if config_instance is not None and ConfigSet.is_dirty:
 		config_instance.dump()
 
 
@@ -176,7 +176,7 @@ class ConfigSet:
 		ConfigSet.is_dirty = True
 
 	def get_access_token(self):
-		if ConfigSet.params['ONEDRIVE_TOKENS'] != None:
+		if ConfigSet.params['ONEDRIVE_TOKENS'] is not None:
 			return ConfigSet.params['ONEDRIVE_TOKENS']
 		else:
 			return None
@@ -199,4 +199,3 @@ class ConfigSet:
 		except:
 			get_logger().warning(
 				'failed to dump config to file "' + ConfigSet.APP_CONF_FILE + '".')
-

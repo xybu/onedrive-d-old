@@ -24,6 +24,8 @@ import functools
 import fcntl
 # import imghdr
 import requests
+# for debugging
+from time import sleep
 from . import od_glob
 from . import od_thread_manager
 
@@ -32,7 +34,7 @@ api_instance = None
 
 def get_instance():
 	global api_instance
-	if api_instance == None:
+	if api_instance is None:
 		api_instance = OneDriveAPI(od_glob.APP_CLIENT_ID, od_glob.APP_CLIENT_SECRET)
 	return api_instance
 
@@ -41,7 +43,7 @@ class OneDriveAPIException(Exception):
 
 	def __init__(self, args=None):
 		super().__init__()
-		if args == None:
+		if args is None:
 			pass
 		elif 'error_description' in args:
 			self.errno = args['error']
@@ -90,6 +92,10 @@ class OneDriveAPI:
 	UNSUPPORTED_TYPES = ['notebook']
 	ROOT_ENTRY_ID = 'me/skydrive'
 
+	logger = od_glob.get_logger()
+	config = od_glob.get_config_instance()
+	threadman = od_thread_manager.get_instance()
+
 	def __init__(self, client_id, client_secret, client_scope=CLIENT_SCOPE, redirect_uri=REDIRECT_URI):
 		self.client_access_token = None
 		self.client_refresh_token = None
@@ -98,8 +104,6 @@ class OneDriveAPI:
 		self.client_scope = client_scope
 		self.client_redirect_uri = redirect_uri
 		self.http_client = requests.Session()
-		self.threadman = od_thread_manager.get_instance()
-		self.logger = od_glob.get_logger()
 
 	def parse_response(self, request, error, ok_status=requests.codes.ok):
 		ret = request.json()
@@ -116,17 +120,17 @@ class OneDriveAPI:
 		"""
 		Note that this function still throws exceptions.
 		"""
-		if self.client_refresh_token == None:
+		if self.client_refresh_token is None:
 			raise OneDriveAuthError()
 		refreshed_token_set = self.refresh_token(self.client_refresh_token)
-		od_glob.get_config_instance().set_access_token(refreshed_token_set)
+		self.config.set_access_token(refreshed_token_set)
 		self.logger.info('auto refreshed API token in face of auth error.')
 
 	def get_auth_uri(self, display='touch', locale='en', state=''):
 		"""
 		Use the code returned in the final redirect URL to exchange for
 		an access token
-		
+
 		http://msdn.microsoft.com/en-us/library/dn659750.aspx
 		"""
 		params = {
@@ -142,7 +146,7 @@ class OneDriveAPI:
 		return OneDriveAPI.OAUTH_AUTHORIZE_URI + urllib.parse.urlencode(params)
 
 	def is_signed_in(self):
-		return self.access_token != None
+		return self.access_token is not None
 
 	def set_user_id(self, id):
 		self.user_id = id
@@ -157,15 +161,15 @@ class OneDriveAPI:
 	def get_access_token(self, code=None, uri=None):
 		"""
 		http://msdn.microsoft.com/en-us/library/dn659750.aspx
-		
-		return a dict with keys token_type, expires_in, scope, 
+
+		return a dict with keys token_type, expires_in, scope,
 		access_token, refresh_token, authentication_token
 		"""
-		if uri != None and '?' in uri:
+		if uri is not None and '?' in uri:
 			qs_dict = urllib.parse.parse_qs(uri.split('?')[1])
 			if 'code' in qs_dict:
 				code = qs_dict['code']
-		if code == None:
+		if code is None:
 			raise OneDriveValueError(
 				{'error': 'access_code_not_found', 'error_description': 'The access code is not specified.'})
 
@@ -213,8 +217,7 @@ class OneDriveAPI:
 	def sign_out(self):
 		while True:
 			try:
-				r = self.http_client.get(OneDriveAPI.OAUTH_SIGNOUT_URI + '?client_id=' +
-				                         self.client_id + '&redirect_uri=' + self.client_redirect_uri)
+				r = self.http_client.get(OneDriveAPI.OAUTH_SIGNOUT_URI + '?client_id=' + self.client_id + '&redirect_uri=' + self.client_redirect_uri)
 				return self.parse_response(r, OneDriveAuthError)
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
@@ -335,7 +338,7 @@ class OneDriveAPI:
 		Return an entry dict if opeation succeeds.
 		@param overwrite: whether or not to overwrite an existing entry. True, False, None (ChooseNewName).
 		"""
-		if overwrite == None:
+		if overwrite is None:
 			overwrite = 'ChooseNewName'
 		data = {'destination': dest_folder_id}
 		headers = {
@@ -393,7 +396,7 @@ class OneDriveAPI:
 			user_id = folder_id.split('.')[-1]
 			url = "https://cid-" + user_id + \
 				".users.storage.live.com/users/0x" + user_id + "/LiveFolders/" + name
-		# elif remote_path != None:
+		# elif remote_path is not None:
 		# 	url = "https://cid-" + user_id + ".users.storage.live.com/users/0x" + user_id + "/LiveFolders/" + remote_path
 		else:
 			self.logger.error("cannot request BITS. folder_id is invalid.")
@@ -450,8 +453,7 @@ class OneDriveAPI:
 				target_cursor = min(source_cursor + block_size, source_size) - 1
 				source_file.seek(source_cursor)
 				data = source_file.read(target_cursor - source_cursor + 1)
-				self.logger.debug("uploading block %d - %d (total: %d B)",
-			    	              source_cursor, target_cursor, source_size)
+				self.logger.debug("uploading block %d - %d (total: %d B)", source_cursor, target_cursor, source_size)
 				response = self.http_client.request('post', url, data=data, headers={
 					'X-Http-Method-Override': 'BITS_POST',
 					'BITS-Packet-Type': 'Fragment',
@@ -465,17 +467,28 @@ class OneDriveAPI:
 					response.close()
 					fcntl.lockf(source_file, fcntl.LOCK_UN)
 					source_file.close()
+					# should I cancel session? https://msdn.microsoft.com/en-us/library/aa362829%28v=vs.85%29.aspx
 					return None
 				else:
 					source_cursor = int(response.headers['bits-received-content-range'])
 					response.close()
 					del data
+					# sleep(1)
 			except requests.exceptions.ConnectionError:
 				self.logger.info('network connection error.')
 				del data
 				self.threadman.hang_caller()
 		fcntl.lockf(source_file, fcntl.LOCK_UN)
 		source_file.close()
+
+		# refresh token if expired
+		if self.config.is_token_expired():
+			try:
+				self.auto_recover_auth_error()
+			except Exception as e:
+				# this branch is horrible
+				self.logger.error(e)
+				return None
 
 		# BITS: close session
 		self.logger.debug('BITS upload completed. Closing session...')
@@ -488,14 +501,16 @@ class OneDriveAPI:
 		while True:
 			try:
 				response = self.http_client.request('post', url, headers=headers)
-				if response.status_code != requests.codes.ok:
-					if 'www-authenticate' in response.headers and 'invalid_token' in response.headers['www-authenticate']:
+				if response.status_code != requests.codes.ok and response.status_code != requests.codes.created:
+					# when token expires, server return HTTP 500
+					# www-authenticate: 'Bearer realm="OneDriveAPI", error="expired_token", error_description="Auth token expired. Try refreshing."'
+					if 'www-authenticate' in response.headers and 'expired_token' in response.headers['www-authenticate']:  # 'invalid_token' in response.headers['www-authenticate']:
 						response.close()
 						raise OneDriveAuthError()
 					else:
 						# however, when the token is changed,
 						# we will get HTTP 500 with 'x-clienterrorcode': 'UploadSessionNotFound'
-						self.logger.debug('An error occurred closing BITS session. HTTP %d', response.status_code)
+						self.logger.debug('An error occurred when closing BITS session. HTTP %d', response.status_code)
 						self.logger.debug(response.headers)
 						response.close()
 						return None
@@ -513,21 +528,21 @@ class OneDriveAPI:
 		"""
 		Upload the file or data to a path.
 		Returns a dict with keys 'source', 'name', and 'id'
-		
+
 		@param name: the new name used for the uploaded FILE. Assuming the name is NTFS-compatible.
 		@param folder_id: the parent folder of the entry to upload. Default: root folder.
 		@param upload_location: OneDrive upload_location URL. If given, folder_id is ignored.
 		@param local_path: the local path of the FILE.
 		@param data: the data of the entry. If given, local_path is ignored.
 		@param overwrite: whether or not to overwrite existing files, if any.
-		
+
 		To put an empty file, either local_path points to an empty file or data is set ''.
 		To upload a dir, check if it exists, and then send recursive puts to upload its files.
-		
+
 		Another issue is timestamp correction.
 		"""
 		uri = OneDriveAPI.API_URI
-		if upload_location != None:
+		if upload_location is not None:
 			uri += upload_location  # already ends with '/'
 		else:
 			uri += folder_id + '/files/'
@@ -543,9 +558,9 @@ class OneDriveAPI:
 		}
 		uri += '?' + urllib.parse.urlencode(d)
 
-		if data != None:
+		if data is not None:
 			pass
-		elif local_path != None:
+		elif local_path is not None:
 			if not os.path.isfile(local_path):
 				raise OneDriveValueError(
 					{'error': 'wrong_file_type', 'error_description': 'The local path "' + local_path + '" is not a file.'})
@@ -588,7 +603,8 @@ class OneDriveAPI:
 			self.logger.debug('current cursor: ' + str(cursor))
 			try:
 				target = min(cursor + block_size, file_size) - 1
-				r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/content', headers={
+				r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/content',
+					headers={
 						'Range': 'bytes={0}-{1}'.format(cursor, target)
 					})
 				if r.status_code == requests.codes.ok or r.status_code == requests.codes.partial:
@@ -620,7 +636,7 @@ class OneDriveAPI:
 
 	def get(self, entry_id, local_path=None):
 		"""
-		Fetching content of OneNote files will raise OneDriveAPIException: 
+		Fetching content of OneNote files will raise OneDriveAPIException:
 		Resource type 'notebook' doesn't support the path 'content'. (request_url_invalid)
 		"""
 		while True:
@@ -633,7 +649,7 @@ class OneDriveAPI:
 						raise OneDriveAuthError(ret)
 					else:
 						raise OneDriveAPIException(ret)
-				if local_path != None:
+				if local_path is not None:
 					with open(local_path, 'wb') as f:
 						f.write(r.content)
 					return True
@@ -684,4 +700,3 @@ class OneDriveAPI:
 			except requests.exceptions.ConnectionError:
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
-
