@@ -8,8 +8,8 @@ import sys
 import os
 import subprocess
 from . import od_glob
+config = od_glob.get_config_instance(setup_mode=True)
 from . import od_onedrive_api
-
 
 def query_yes_no(question, default='yes'):
 	valid = {'yes': True, 'y': True, 'ye': True, 'no': False, 'n': False}
@@ -55,7 +55,6 @@ class bcolors:
 class PreferenceGuide:
 
 	def __init__(self):
-		self.config = od_glob.get_config_instance(setup_mode=True)
 		self.api = od_onedrive_api.get_instance()
 
 	def start(self):
@@ -83,8 +82,8 @@ class PreferenceGuide:
 		callback_uri = input('\nPlease paste the callback URL:\n')
 		try:
 			tokens = self.api.get_access_token(uri=callback_uri)
-			self.config.set_access_token(tokens)
-			self.config.dump()
+			config.set_access_token(tokens)
+			config.dump()
 			print(
 				bcolors.OKGREEN + 'onedrive-d has been successfully authorized.' + bcolors.ENDC)
 		except od_onedrive_api.OneDriveAPIException as e:
@@ -95,16 +94,16 @@ class PreferenceGuide:
 		if not query_yes_no(bcolors.BOLD + '(STEP 2/4) Do you want to specify path to local OneDrive repository?' + bcolors.ENDC):
 			print(bcolors.OKBLUE + 'Skipped.' + bcolors.ENDC)
 			return
-		path = input('Please enter the abs path to sync with your OneDrive (default: ' + self.config.OS_HOME_PATH + '/OneDrive): ').strip()
+		path = input('Please enter the abs path to sync with your OneDrive (default: ' + config.OS_HOME_PATH + '/OneDrive): ').strip()
 		if path == '':
-			path = self.config.OS_HOME_PATH + '/OneDrive'
+			path = config.OS_HOME_PATH + '/OneDrive'
 		result = False
 		try:
-			result = mkdir_if_missing(path, self.config.OS_USER_ID)
+			result = mkdir_if_missing(path, config.OS_USER_ID)
 			if not result:
 				raise ValueError('"{}" is not a path to directory.', path)
-			self.config.params['ONEDRIVE_ROOT_PATH'] = path
-			self.config.dump()
+			config.params['ONEDRIVE_ROOT_PATH'] = path
+			config.dump()
 			print(bcolors.OKGREEN + 'Path successfully set.' + bcolors.ENDC)
 		except Exception as e:
 			print(bcolors.WARNING + 'Error: {}.'.format(e) + bcolors.ENDC)
@@ -113,44 +112,44 @@ class PreferenceGuide:
 		if not query_yes_no(bcolors.BOLD + '(STEP 3/4) Do you want to change the numeric settings?' + bcolors.ENDC):
 			print(bcolors.OKBLUE + 'Skipped.' + bcolors.ENDC)
 			return
-		inp = input('How many seconds to wait for before retrying a network failure (current: ' + str(self.config.params['NETWORK_ERROR_RETRY_INTERVAL']) + ')?').strip()
+		inp = input('How many seconds to wait for before retrying a network failure (current: ' + str(config.params['NETWORK_ERROR_RETRY_INTERVAL']) + ')?').strip()
 		if inp == '':
-			inp = self.config.params['NETWORK_ERROR_RETRY_INTERVAL']
+			inp = config.params['NETWORK_ERROR_RETRY_INTERVAL']
 		else:
 			try:
 				inp = int(inp)
-				self.config.params['NETWORK_ERROR_RETRY_INTERVAL'] = inp
+				config.params['NETWORK_ERROR_RETRY_INTERVAL'] = inp
 			except Exception as e:
 				print(bcolors.WARNING + 'Error: {}.'.format(e) + bcolors.ENDC)
 				print(bcolors.WARNING + 'Value did not set.' + bcolors.ENDC)
-		inp = input('\nFiles larger than what size (in MiB) will be uploaded blocks by blocks? (current: ' + str(self.config.params['BITS_FILE_MIN_SIZE'] / 2 ** 20) + ')?').strip()
+		inp = input('\nFiles larger than what size (in MiB) will be uploaded blocks by blocks? (current: ' + str(config.params['BITS_FILE_MIN_SIZE'] / 2 ** 20) + ')?').strip()
 		if inp == '':
-			inp = self.config.params['BITS_FILE_MIN_SIZE']
+			inp = config.params['BITS_FILE_MIN_SIZE']
 		else:
 			try:
 				inp = int(inp)
-				self.config.params['BITS_FILE_MIN_SIZE'] = inp * 2 ** 20
+				config.params['BITS_FILE_MIN_SIZE'] = inp * 2 ** 20
 			except Exception as e:
 				print(bcolors.WARNING + 'Error: {}.'.format(e) + bcolors.ENDC)
 				print(bcolors.WARNING + 'Value did not set.' + bcolors.ENDC)
-		inp = input('\nWhen a file is uploaded blocks by blocks, what is the block size (in KiB)? (current: ' + str(self.config.params['BITS_BLOCK_SIZE'] / 2 ** 10) + ')?').strip()
+		inp = input('\nWhen a file is uploaded blocks by blocks, what is the block size (in KiB)? (current: ' + str(config.params['BITS_BLOCK_SIZE'] / 2 ** 10) + ')?').strip()
 		if inp == '':
-			inp = self.config.params['BITS_BLOCK_SIZE']
+			inp = config.params['BITS_BLOCK_SIZE']
 		else:
 			try:
 				inp = int(inp)
-				self.config.params['BITS_BLOCK_SIZE'] = inp * 2 ** 10
+				config.params['BITS_BLOCK_SIZE'] = inp * 2 ** 10
 			except Exception as e:
 				print(bcolors.WARNING + 'Error: {}.'.format(e) + bcolors.ENDC)
 				print(bcolors.WARNING + 'Value did not set.' + bcolors.ENDC)
-		self.config.dump()
+		config.dump()
 
 	def modify_ignore_list(self):
 		if not query_yes_no(bcolors.BOLD + '(STEP 4/4) Do you want to edit the ignore list file?' + bcolors.ENDC):
-			print(bcolors.OKBLUE + 'Skipped. You can manually edit "' + self.config.APP_IGNORE_FILE + '" at your convenience.' + bcolors.ENDC)
+			print(bcolors.OKBLUE + 'Skipped. You can manually edit "' + config.APP_IGNORE_FILE + '" at your convenience.' + bcolors.ENDC)
 			return
 		print('Calling your default editor...')
 		subprocess.call(
-			['${EDITOR:-vi} "' + self.config.APP_IGNORE_FILE + '"'], shell=True)
+			['${EDITOR:-vi} "' + config.APP_IGNORE_FILE + '"'], shell=True)
 		print(
 			bcolors.OKGREEN + 'You have exited from the text editor.' + bcolors.ENDC)

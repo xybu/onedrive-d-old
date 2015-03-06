@@ -47,10 +47,10 @@ Another recommended package is `inotify-tools` (for most package managers), whic
 
 ```bash
 # Register package
-sudo python3 ./onedrive_d/setup.py install
+sudo python3 setup.py install
 
 # Clean temporary files
-sudo python3 ./onedrive_d/setup.py clean
+sudo python3 setup.py clean
 
 # Create settings dir
 mkdir ~/.onedrive
