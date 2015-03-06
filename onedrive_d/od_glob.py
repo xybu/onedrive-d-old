@@ -9,8 +9,9 @@ import sys
 import logging
 import atexit
 import json
+from dateutil.parser import parse as str_to_time
 from calendar import timegm
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pwd import getpwnam
 from . import od_ignore_list
 
@@ -18,7 +19,6 @@ config_instance = None
 logger_instance = None
 update_last_run_timestamp = False
 
-DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S%z'
 APP_CLIENT_ID = '000000004010C916'
 APP_CLIENT_SECRET = 'PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi'
 APP_VERSION = '1.1.0dev'
@@ -56,14 +56,8 @@ def now():
 
 
 def time_to_str(t):
-	s = t.strftime(DATETIME_FORMAT)
-	if '+' not in s:
-		s = s + '+0000'
+	s = t.strftime('%Y-%m-%dT%H:%M:%S.%f%Z')
 	return s
-
-
-def str_to_time(s):
-	return datetime.strptime(s, DATETIME_FORMAT)
 
 
 def str_to_timestamp(s):
@@ -118,6 +112,8 @@ class ConfigSet:
 		'LAST_RUN_TIMESTAMP': '1970-01-01T00:00:00+0000'
 	}
 
+	tokens = None
+
 	OS_HOSTNAME = os.uname()[1]
 	OS_USERNAME = os.getenv('SUDO_USER')
 
@@ -139,10 +135,11 @@ class ConfigSet:
 				get_logger().critical('onedrive-d may not be installed properly. Exit.')
 				sys.exit(1)
 			ConfigSet.APP_CONF_FILE = ConfigSet.APP_CONF_PATH + '/config_v2.json'
+			ConfigSet.APP_TOKEN_FILE = ConfigSet.APP_CONF_PATH + '/session.json'
 			if os.path.exists(ConfigSet.APP_CONF_FILE):
 				try:
 					with open(ConfigSet.APP_CONF_FILE, 'r') as f:
-						saved_params = json.loads(f.read())
+						saved_params = json.load(f)
 						for key in saved_params:
 							ConfigSet.params[key] = saved_params[key]
 				except:
@@ -176,26 +173,31 @@ class ConfigSet:
 		ConfigSet.is_dirty = True
 
 	def get_access_token(self):
-		if ConfigSet.params['ONEDRIVE_TOKENS'] is not None:
-			return ConfigSet.params['ONEDRIVE_TOKENS']
-		else:
-			return None
+		if ConfigSet.tokens is None:
+			try:
+				with open(ConfigSet.APP_TOKEN_FILE, 'r') as f:
+					ConfigSet.tokens = json.load(f)
+			except:
+				pass
+		return ConfigSet.tokens
 
 	def is_token_expired(self):
-		return str_to_time(ConfigSet.params['ONEDRIVE_TOKENS_EXP']) < now()
+		return str_to_time(ConfigSet.tokens['expiration']) < now()
 
 	def set_access_token(self, tokens):
-		d = now() + timedelta(seconds=tokens['expires_in'])
-		ConfigSet.params['ONEDRIVE_TOKENS'] = tokens
-		ConfigSet.params['ONEDRIVE_TOKENS_EXP'] = time_to_str(d)
+		exp = now() + timedelta(seconds=tokens['expires_in'])
+		tokens['expiration'] = time_to_str(exp)
+		ConfigSet.tokens = tokens
 		ConfigSet.is_dirty = True
 
 	def dump(self):
 		try:
 			with open(ConfigSet.APP_CONF_FILE, 'w') as f:
 				json.dump(ConfigSet.params, f)
+			with open(ConfigSet.APP_TOKEN_FILE, 'w') as f:
+				json.dump(ConfigSet.tokens, f)
 			os.chown(ConfigSet.APP_CONF_FILE, ConfigSet.OS_USER_ID, -1)
+			os.chown(ConfigSet.APP_TOKEN_FILE, ConfigSet.OS_USER_ID, -1)
 			get_logger().debug('config saved.')
 		except:
-			get_logger().warning(
-				'failed to dump config to file "' + ConfigSet.APP_CONF_FILE + '".')
+			get_logger().warning('failed to save config.')

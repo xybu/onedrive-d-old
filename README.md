@@ -8,6 +8,8 @@ A Microsoft OneDrive desktop client / daemon on Linux, written in Python 3.
 This branch is based on `future-daemon` branch. The goal is replace the old Live API with the new OneDrive API described 
 in http://onedrive.github.io/.
 
+Currently experimental. DO NOT USE.
+
 ## Install
 
 Steps 1, 2, and 5 need to be done manually. For steps 3 and 4, the script file `install.sh` will handle the work automatically.

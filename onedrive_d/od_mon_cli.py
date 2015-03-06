@@ -33,18 +33,16 @@ class Monitor:
 			sys.exit(1)
 		elif self.config.is_token_expired():
 			self.logger.info('token has expired. Try refreshing it.')
-			self.api.set_refresh_token(tokens['refresh_token'])
 			try:
-				self.api.auto_recover_auth_error()
+				tokens = self.api.refresh_token(tokens['refresh_token'])
+				self.config.set_access_token(tokens)
 				self.logger.info('successfully refreshed access token.')
 			except Exception as e:
 				self.logger.critical(e)
 				sys.exit(1)
 		else:
 			# the token exists and is not expired
-			self.api.set_access_token(tokens['access_token'])
-			self.api.set_refresh_token(tokens['refresh_token'])
-			self.api.set_user_id(tokens['user_id'])
+			self.api.load_tokens(token)
 		self.root_entry_id = self.api.get_property()['id']
 		self.api.ROOT_ENTRY_ID = self.root_entry_id
 
