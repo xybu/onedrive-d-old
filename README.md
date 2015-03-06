@@ -8,7 +8,9 @@ A Microsoft OneDrive desktop client / daemon on Linux, written in Python 3.
 This branch is based on `future-daemon` branch. The goal is replace the old Live API with the new OneDrive API described 
 in http://onedrive.github.io/.
 
-Currently experimental. DO NOT USE.
+To make best use of the new API, this update is INCOMPATIBLE with ANY older versions.
+
+Currently under dev. DO NOT USE.
 
 ## Install
 
@@ -50,10 +52,10 @@ Another recommended package is `inotify-tools` (for most package managers), whic
 
 ```bash
 # Register package
-sudo python3 ./onedrive_d/setup.py install
+sudo python3 setup.py install
 
 # Clean temporary files
-sudo python3 ./onedrive_d/setup.py clean
+sudo python3 setup.py clean
 
 # Create settings dir
 mkdir ~/.onedrive

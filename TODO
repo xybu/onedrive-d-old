@@ -1,1 +1,9 @@
 It doesn't feel safe to store tokens in plain text.
+
+API:
+
+1. finish new API
+2. update database structure
+3. update worker
+4. update monitor
+5. update inotifywait

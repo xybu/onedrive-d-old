@@ -43,12 +43,8 @@ class Monitor:
 		else:
 			# the token exists and is not expired
 			self.api.load_tokens(token)
-		self.root_entry_id = self.api.get_property()['id']
-		self.api.ROOT_ENTRY_ID = self.root_entry_id
-
-	def test_quota(self):
-		self.logger.info('try getting quota info.')
-		print(self.api.get_quota())
+		# should support more than one drive later
+		self.root_item = self.api.get_item()
 
 	def create_workers(self):
 		self.taskmgr = od_sqlite.TaskManager()
@@ -56,10 +52,11 @@ class Monitor:
 			od_worker_thread.WorkerThread().start()
 
 	def create_inotify_thread(self):
+		return
 		od_inotify_thread.INotifyThread.pause_event.clear()
 		self.inotify_thread = od_inotify_thread.INotifyThread(
 			root_path=self.config.params['ONEDRIVE_ROOT_PATH'],
-			root_id=self.root_entry_id,
+			root_item=self.root_item,
 			ignore_list=self.config.ignore_list)
 		self.inotify_thread.start()
 
@@ -109,7 +106,6 @@ class Monitor:
 		# do not check root path because it is checked in config
 		self.load_token()
 		# self.test_quota()
-		od_glob.will_update_last_run_time()
 		self.create_workers()
 		self.create_inotify_thread()
 		self.heart_beat()

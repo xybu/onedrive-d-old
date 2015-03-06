@@ -8,6 +8,7 @@ import os
 import threading
 import sqlite3
 from . import od_glob
+from . import od_objects
 
 
 class TaskManager:
@@ -130,34 +131,78 @@ class TaskManager:
 
 
 class EntryManager:
+	"""
+	Entry database singleton.
+	"""
+	db_instance = None
 	lock = threading.Lock()
-	db_name = 'entries.db'
-	db_initialized = False
 	logger = od_glob.get_logger()
 
-	def __init__(self):
-		config = od_glob.get_config_instance()
-		self.conn = sqlite3.connect(
-			config.APP_CONF_PATH + '/' + EntryManager.db_name, isolation_level=None)
+	@staticmethod
+	def get_instance():
+		EntryManager.lock.acquire()
+		if EntryManager.db_instance is None:
+			config = od_glob.get_config_instance()
+			EntryManager.db_instance = EntryManager(config.APP_CONF_PATH + '/entries_v2.sqlite')
+		EntryManager.lock.release()
+		return EntryManager.db_instance
+
+	@staticmethod
+	def free_instance():
+		EntryManager.lock.acquire()
+		if EntryManager.db_instance is not None:
+			EntryManager.db_instance.close()
+		EntryManager.lock.release()
+
+	def __init__(self, path):
+		self.conn = sqlite3.connect(path, isolation_level=None)
 		self.cursor = self.conn.cursor()
-		self.acquire_lock()
-		if not EntryManager.db_initialized:
-			self.cursor.execute("""
-				CREATE TABLE IF NOT EXISTS entries
-				(parent_path TEXT, name TEXT, isdir INT, remote_id TEXT UNIQUE PRIMARY KEY,
-				remote_parent_id TEXT PRIMARY_KEY, size INT, client_updated_time TEXT, status TEXT, visited INT,
-				UNIQUE(parent_path, name) ON CONFLICT REPLACE)
-			""")
-			self.cursor.execute('UPDATE entries SET visited=0')
-			self.conn.commit()
-			EntryManager.db_initialized = True
-		self.release_lock()
+		self.cursor.execute("""
+			CREATE TABLE IF NOT EXISTS drives
+			(id TEXT PRIMARY_KEY, type TEXT, root_id TEXT, local_path TEXT, quota_free INT, quota_total INT, last_update TEXT, 
+			UNIQUE(local_path) ON CONFLICT FAIL)
+		""")
+		self.cursor.execute("""
+			CREATE TABLE IF NOT EXISTS items
+			(id TEXT PRIMARY_KEY, name TEXT, isdir INT, size INT, local_path TEXT, 
+			parent_path TEXT, parent_id TEXT, 
+			last_mtime TEXT, last_etag TEXT, last_hash_type TEXT, last_hash TEXT, 
+			status TEXT, visited INT, UNIQUE(parent_path, name) ON CONFLICT REPLACE)
+		""")
+		self.cursor.execute('UPDATE items SET visited=0')
+		self.conn.commit()
 
 	def close(self):
-		self.acquire_lock()
 		self.conn.commit()
 		self.conn.close()
-		self.release_lock()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	def acquire_lock(self):
 		EntryManager.lock.acquire()

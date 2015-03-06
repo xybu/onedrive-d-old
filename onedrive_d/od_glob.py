@@ -17,7 +17,6 @@ from . import od_ignore_list
 
 config_instance = None
 logger_instance = None
-update_last_run_timestamp = False
 
 APP_CLIENT_ID = '000000004010C916'
 APP_CLIENT_SECRET = 'PimIrUibJfsKsMcd0SqwPBwMTV7NDgYi'
@@ -82,13 +81,7 @@ def flush_log_at_shutdown():
 		logging.shutdown()
 
 
-def will_update_last_run_time():
-	update_last_run_timestamp = True
-
-
 def dump_config():
-	if update_last_run_timestamp and config_instance is not None:
-		config_instance.set_last_run_timestamp()
 	if config_instance is not None and ConfigSet.is_dirty:
 		config_instance.dump()
 
