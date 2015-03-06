@@ -8,7 +8,6 @@ import sys
 import os
 import subprocess
 from . import od_glob
-from . import od_onedrive_api
 
 
 def query_yes_no(question, default='yes'):
@@ -56,6 +55,7 @@ class PreferenceGuide:
 
 	def __init__(self):
 		self.config = od_glob.get_config_instance(setup_mode=True)
+		from . import od_onedrive_api
 		self.api = od_onedrive_api.get_instance()
 
 	def start(self):
