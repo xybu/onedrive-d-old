@@ -3,6 +3,10 @@ onedrive-d
 
 A Microsoft OneDrive desktop client / daemon on Linux, written in Python 3.
 
+## Note for this branch
+
+This branch experiments with daemonization of onedrive-d process.
+
 ## Install
 
 Steps 1, 2, and 5 need to be done manually. For steps 3 and 4, the script file `install.sh` will handle the work automatically.
@@ -11,9 +15,9 @@ Steps 1, 2, and 5 need to be done manually. For steps 3 and 4, the script file `
 
 ```bash
 # To remove onedrive-d < 1.0
-sudo pip uninstall onedrive_d
+sudo pip uninstall onedrive-d
 # To remove onedrive-d >= 1.0
-sudo pip3 uninstall onedrive_d
+sudo pip3 uninstall onedrive-d
 
 # Remove residual config files
 rm -rfv ~/.onedrive
@@ -51,6 +55,11 @@ sudo python3 ./onedrive_d/setup.py clean
 # Create settings dir
 mkdir ~/.onedrive
 cp ./onedrive_d/res/default_ignore.ini ~/.onedrive/ignore_v2.ini
+
+# Create log file
+sudo touch /var/log/onedrive_d.log
+# you may need to change `whoami` to your username
+sudo chown `whoami` /var/log/onedrive_d.log
 ```
 
 (5) Configure / start onedrive-d
@@ -65,8 +74,11 @@ onedrive-pref
 # Or run with GUI
 onedrive-pref --ui=gtk
 
-# Run onedrive-d (not daemonized yet)
-onedrive-d
+# Run onedrive-d
+# start as a daemon
+onedrive-d start
+# or start as a regular process
+onedrive-d start --debug
 ```
 
 ## Run without installation
@@ -77,6 +89,11 @@ do steps 1 to 3 in *Installation* section, and copy config files by
 ```bash
 mkdir ~/.onedrive
 cp ./onedrive_d/res/default_ignore.ini ~/.onedrive/ignore_v2.ini
+
+# Create log file if you need to run onedrive-d as daemon
+sudo touch /var/log/onedrive_d.log
+# you may need to change `whoami` to your username
+sudo chown `whoami` /var/log/onedrive_d.log
 ```
 
 Now you can run the program by commands
@@ -85,10 +102,10 @@ Now you can run the program by commands
 # assume you are in "onedrive-d" folder that contains "onedrive_d" folder.
 
 # equivalent to `onedrive-pref` command
-python3 -m onedrive_d.od_pref
+python3 -m onedrive_d.od_pref --help
 
 # equivalent to `onedrive-d` command
-python3 -m onedrive_d.od_main
+python3 -m onedrive_d.od_main --help
 ```
 
 Note that the commands above are no longer valid after installing the package to the system.

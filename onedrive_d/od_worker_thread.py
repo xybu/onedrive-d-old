@@ -122,8 +122,7 @@ class WorkerThread(threading.Thread):
 						if previous_entry['status'] == 'MOVED_FROM':
 							# delete the record to force MOVED_TO to do upload action.
 							self.entrymgr.del_entry_by_remote_id(previous_entry['remote_id'])
-						self.taskmgr.add_task('rm', local_path=local_path, remote_id=entry[
-						                      'id'], remote_parent_id=entry['parent_id'])
+						self.taskmgr.add_task('rm', local_path=local_path, remote_id=entry['id'], remote_parent_id=entry['parent_id'])
 						# local_entries.remove(entry['name'])
 						continue
 					# this is a dir that exists remotely but not locally
@@ -142,8 +141,7 @@ class WorkerThread(threading.Thread):
 				self.entrymgr.update_entry(local_path, entry)
 
 				if is_recursive_task:
-					self.taskmgr.add_task(type=task['type'], local_path=local_path, remote_id=entry[
-					                      'id'], remote_parent_id=entry['parent_id'], args=task['args'])
+					self.taskmgr.add_task(type=task['type'], local_path=local_path, remote_id=entry['id'], remote_parent_id=entry['parent_id'], args=task['args'])
 
 				local_entries.remove(entry['name'])
 			elif entry['type'] not in self.api.UNSUPPORTED_TYPES:
@@ -168,8 +166,7 @@ class WorkerThread(threading.Thread):
 				if entry['name'] in local_entries:
 					local_entries.remove(entry['name'])
 			else:
-				self.logger.info('skipped file "' + task['local_path'] + '/' + entry[
-				                 'name'] + '" of unsupported type "' + entry['type'] + '".')
+				self.logger.info('skipped file "' + task['local_path'] + '/' + entry['name'] + '" of unsupported type "' + entry['type'] + '".')
 
 		for ent_name in local_entries:
 			# untouched local files
@@ -180,8 +177,7 @@ class WorkerThread(threading.Thread):
 					if previous_entry['status'] == 'MOVED_TO':
 						# the old record marks a movement
 						# propagate to server
-						self.taskmgr.add_task('mv', local_path, remote_id=previous_entry[
-						                      'remote_id'], remote_parent_id=previous_entry['remote_parent_id'])
+						self.taskmgr.add_task('mv', local_path, remote_id=previous_entry['remote_id'], remote_parent_id=previous_entry['remote_parent_id'])
 					else:
 						# there was an old record about this dir before
 						# but now the dir in remote is gone
@@ -205,7 +201,11 @@ class WorkerThread(threading.Thread):
 		"""
 		@param local_path: path either pointing to a file or DNE.
 		"""
-		is_exist = os.path.exists(local_path)
+		try:
+			is_exist = os.path.exists(local_path)
+		except UnicodeEncodeError:
+			self.logger.error('Failed to stat entry "%s". Path is not Unicode.', local_path)
+			return
 		previous_entry = self.entrymgr.get_entry(isdir=False, local_path=local_path)
 		if not is_exist and entry is not None:
 			if previous_entry is not None and previous_entry['remote_id'] == entry['id'] and previous_entry['client_updated_time'] == entry['client_updated_time']:
@@ -223,8 +223,7 @@ class WorkerThread(threading.Thread):
 				# or prev record exists, but its points to a different entry,
 				# or prev record exists, and same entry, but timestamps differ (local is
 				# older for sure).
-				self.taskmgr.add_task('dl', local_path, entry['id'], entry[
-				                      'parent_id'], args='add_row,', extra_info=json.dumps(entry))
+				self.taskmgr.add_task('dl', local_path, entry['id'], entry['parent_id'], args='add_row,', extra_info=json.dumps(entry))
 		elif is_exist:
 			# the file exists
 			try:
@@ -246,8 +245,7 @@ class WorkerThread(threading.Thread):
 						remote_mtime = od_glob.str_to_time(previous_entry['client_updated_time'])
 						if local_mtime != remote_mtime:
 							# but the file was changed after last sync. Better upload than delete.
-							self.taskmgr.add_task(
-								'up', local_path, remote_parent_id=remote_parent_id)
+							self.taskmgr.add_task('up', local_path, remote_parent_id=remote_parent_id)
 						else:
 							# the file wasn't modified after it was last recorded. Delete it
 							# locally.
@@ -273,17 +271,15 @@ class WorkerThread(threading.Thread):
 						self.entrymgr.update_entry(local_path=local_path, obj=entry)
 					else:
 						self.logger.warning('case1: ' + str(local_mtime) + ',' +
-						                    str(local_fsize) + ' vs ' + str(remote_mtime) + ',' + str(entry['size']))
+											str(local_fsize) + ' vs ' + str(remote_mtime) + ',' + str(entry['size']))
 						new_path = self.resolve_conflict(local_path, self.config.OS_HOSTNAME)
 						if new_path is None:
-							self.logger.critical('cannot rename file "' + local_path +
-							                     '" to avoid conflict. Skip the conflicting remote file.')
+							self.logger.critical('cannot rename file "' + local_path + '" to avoid conflict. Skip the conflicting remote file.')
 							return
 						# add the renamed local file to list so as to upload it later
 						local_entries.append(os.path.basename(new_path))
 						# download the remote file to the path
-						self.taskmgr.add_task('dl', local_path, entry['id'], entry[
-						                      'parent_id'], args='add_row,', extra_info=json.dumps(entry))
+						self.taskmgr.add_task('dl', local_path, entry['id'], entry['parent_id'], args='add_row,', extra_info=json.dumps(entry))
 				else:
 					# we have a previous record for reference
 					if previous_entry['remote_id'] == entry['id']:
@@ -293,25 +289,22 @@ class WorkerThread(threading.Thread):
 							self.taskmgr.add_task('up', local_path, entry['id'], entry['parent_id'])
 						elif local_mtime < remote_mtime and local_mtime == od_glob.str_to_time(previous_entry['client_updated_time']):
 							# the remote entry is strictly newer, so download it
-							self.taskmgr.add_task('dl', local_path, entry['id'], entry[
-							                      'parent_id'], args='add_row,', extra_info=json.dumps(entry))
+							self.taskmgr.add_task('dl', local_path, entry['id'], entry['parent_id'], args='add_row,', extra_info=json.dumps(entry))
 						elif local_mtime != remote_mtime or entry['client_updated_time'] != previous_entry['client_updated_time']:
 							# there may be more than one revisions between them
 							# better keep both
 							self.logger.warning('case2: ' + str(local_mtime) + ',' +
-							                    str(local_fsize) + ' vs ' + str(remote_mtime) + ',' + str(entry['size']))
+												str(local_fsize) + ' vs ' + str(remote_mtime) + ',' + str(entry['size']))
 							new_path = self.resolve_conflict(local_path, self.config.OS_HOSTNAME)
 							if new_path is None:
-								self.logger.critical('cannot rename file "' + local_path +
-								                     '" to avoid conflict. Skip the conflicting remote file.')
+								self.logger.critical('cannot rename file "' + local_path + '" to avoid conflict. Skip the conflicting remote file.')
 								return
 							# add the renamed local file to list so as to upload it later
 							local_entries.append(os.path.basename(new_path))
 							# the existing entry record will be for the downloaded file
 							# the renamed file will be treated as a newly created file later
 							# download the remote file to the path
-							self.taskmgr.add_task('dl', local_path, entry['id'], entry[
-							                      'parent_id'], args='add_row,', extra_info=json.dumps(entry))
+							self.taskmgr.add_task('dl', local_path, entry['id'], entry['parent_id'], args='add_row,', extra_info=json.dumps(entry))
 						else:
 							# local record and remote record match perfectly
 							pass
@@ -325,16 +318,14 @@ class WorkerThread(threading.Thread):
 								od_glob.str_to_time(previous_entry['client_updated_time'])) + ',' + str(previous_entry['size']))
 							new_path = self.resolve_conflict(local_path, self.config.OS_HOSTNAME)
 							if new_path is None:
-								self.logger.critical('cannot rename file "' + local_path +
-								                     '" to avoid conflict. Skip the conflicting remote file.')
+								self.logger.critical('cannot rename file "' + local_path + '" to avoid conflict. Skip the conflicting remote file.')
 								return
 							local_entries.append(os.path.basename(new_path))
 						# else:
 							# the local file was not modified since its last sync
 							# so the user must have replaced it with the remote one
-						#	pass
-						self.taskmgr.add_task('dl', local_path, entry['id'], entry[
-						                      'parent_id'], args='add_row,', extra_info=json.dumps(entry))
+						# 	pass
+						self.taskmgr.add_task('dl', local_path, entry['id'], entry['parent_id'], args='add_row,', extra_info=json.dumps(entry))
 		else:
 			# the file does not exist, and there is no remote entry
 			# there must be logical bug calling this function
@@ -509,8 +500,8 @@ class WorkerThread(threading.Thread):
 
 	def resolve_conflict(self, path, t):
 		"""
-		Append a type flag after the entry name when 
-			* the remote entry is a dir while the local entry is a file, or 
+		Append a type flag after the entry name when
+			* the remote entry is a dir while the local entry is a file, or
 			* when the remote entry is a file while the local entry is a dir.
 
 		@param path: the local file path

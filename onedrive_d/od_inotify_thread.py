@@ -25,6 +25,9 @@ class INotifyThread(threading.Thread):
 		self.logger = od_glob.get_logger()
 
 	def stop(self):
+		self.subp.terminate()
+		subprocess.call(['kill', '-s', '9', str(self.subp.pid)])
+		self.logger.debug('inotifywait killed.')
 		self.running = False
 
 	def parse_record(self, row):
@@ -44,7 +47,7 @@ class INotifyThread(threading.Thread):
 		if 'CLOSE_WRITE' in event:
 			# the situation is complex. cannot simply upload without knowing its remote status.
 			# sync its parent without recursion
-			if parent_entry != None:
+			if parent_entry is not None:
 				self.sync_path(path, parent_entry)
 			elif path == self.root_path:
 				self.sync_root()
@@ -53,7 +56,7 @@ class INotifyThread(threading.Thread):
 		elif 'MOVED_TO' in event:
 			self.logger.debug(row)
 			parent_entry_id = None
-			if parent_entry == None:
+			if parent_entry is None:
 				if path == self.root_path:
 					parent_entry_id = self.root_id
 				else:
@@ -64,7 +67,7 @@ class INotifyThread(threading.Thread):
 			isdir = 'ISDIR' in event
 			self.entrymgr.update_moved_entry_if_exists(
 				isdir, path + name, parent_entry_id)
-			if parent_entry != None:
+			if parent_entry is not None:
 				self.sync_path(path, parent_entry)
 			else:
 				self.sync_root()
@@ -79,12 +82,12 @@ class INotifyThread(threading.Thread):
 			isdir = 'ISDIR' in event
 			target_entry = self.entrymgr.get_entry(isdir=isdir,
 				local_path=path + name)
-			if target_entry != None:
+			if target_entry is not None:
 				self.taskmgr.add_task('rm' if isdir else 'rf',
 					local_path=path + name,
 					remote_id=target_entry['remote_id'],
 					remote_parent_id=target_entry['remote_parent_id'])
-			elif parent_entry != None:
+			elif parent_entry is not None:
 				self.sync_path(path, parent_entry)
 			elif path == self.root_path:
 				self.sync_root()
@@ -97,12 +100,12 @@ class INotifyThread(threading.Thread):
 			# need to be recursive
 			# For Caja file manager, creating dir results in a sequence of
 			# CREATE_ISDIR, MOVE_FROM, MOVE_TO events.
-			# if parent_entry == None:
-			#	self.logger.info('did not find entry for dir "%s".', path)
-			#	return
-			#self.sync_path(path, parent_entry)
 			# Not sure for other file managers.
 			# Better wait until a deep sync.
+			# if parent_entry is None:
+			# 	self.logger.info('did not find entry for dir "%s".', path)
+			# 	return
+			# self.sync_path(path, parent_entry)
 			pass
 
 	def sync_root(self):
@@ -115,7 +118,7 @@ class INotifyThread(threading.Thread):
 			args='')
 
 	def run(self):
-		if shutil.which('inotifywait') == None:
+		if shutil.which('inotifywait') is None:
 			# inotifywait is not installed
 			self.logger.critical('`inotifywait` was not found. Skip module.')
 			return
@@ -145,11 +148,6 @@ class INotifyThread(threading.Thread):
 				# del csv_rows
 
 		self.logger.debug('exit while loop.')
-		self.subp.terminate()
-		subprocess.call(['kill', '-9', str(self.subp.pid)])
 		self.taskmgr = None
 		self.entrymgr.close()
 		self.logger.debug('stopped.')
-
-
-

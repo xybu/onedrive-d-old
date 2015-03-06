@@ -84,4 +84,3 @@ class IgnoreList:
 		for x in self.ignore_paths:
 			dump = dump + '\t\t' + x + '\n'
 		return dump
-

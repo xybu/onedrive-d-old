@@ -1,4 +1,0 @@
-requests
-urllib3
-certifi
-send2trash

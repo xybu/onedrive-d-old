@@ -76,10 +76,8 @@ class PreferenceGuide:
 			return
 		print('\nYou will need to visit the OneDrive sign-in page in a browser, ')
 		print('log in and authorize onedrive-d, and then copy and paste the ')
-		print('callback URL, which should start with \n"%s".\n' %
-		      self.api.client_redirect_uri)
-		print(
-			'\033[1mThe callback URL is the URL where the sign-in page finally goes blank.\033[21m\n')
+		print('callback URL, which should start with \n"%s".\n' % self.api.client_redirect_uri)
+		print('\033[1mThe callback URL is the URL where the sign-in page finally goes blank.\033[21m\n')
 		print('Please visit the sign-in URL in your browser:\n')
 		print(self.api.get_auth_uri())
 		callback_uri = input('\nPlease paste the callback URL:\n')
@@ -90,22 +88,20 @@ class PreferenceGuide:
 			print(
 				bcolors.OKGREEN + 'onedrive-d has been successfully authorized.' + bcolors.ENDC)
 		except od_onedrive_api.OneDriveAPIException as e:
-			print(bcolors.WARNING +
-			      'Error: failed to authorize the client with the given URL.' + bcolors.ENDC)
+			print(bcolors.WARNING + 'Error: failed to authorize the client with the given URL.' + bcolors.ENDC)
 			print('%s' % e)
 
 	def set_root_path(self):
 		if not query_yes_no(bcolors.BOLD + '(STEP 2/4) Do you want to specify path to local OneDrive repository?' + bcolors.ENDC):
 			print(bcolors.OKBLUE + 'Skipped.' + bcolors.ENDC)
 			return
-		path = input('Please enter the abs path to sync with your OneDrive (default: ' +
-		             self.config.OS_HOME_PATH + '/OneDrive): ').strip()
+		path = input('Please enter the abs path to sync with your OneDrive (default: ' + self.config.OS_HOME_PATH + '/OneDrive): ').strip()
 		if path == '':
 			path = self.config.OS_HOME_PATH + '/OneDrive'
 		result = False
 		try:
 			result = mkdir_if_missing(path, self.config.OS_USER_ID)
-			if result == False:
+			if not result:
 				raise ValueError('"{}" is not a path to directory.', path)
 			self.config.params['ONEDRIVE_ROOT_PATH'] = path
 			self.config.dump()
@@ -117,8 +113,7 @@ class PreferenceGuide:
 		if not query_yes_no(bcolors.BOLD + '(STEP 3/4) Do you want to change the numeric settings?' + bcolors.ENDC):
 			print(bcolors.OKBLUE + 'Skipped.' + bcolors.ENDC)
 			return
-		inp = input('How many seconds to wait for before retrying a network failure (current: ' +
-		            str(self.config.params['NETWORK_ERROR_RETRY_INTERVAL']) + ')?').strip()
+		inp = input('How many seconds to wait for before retrying a network failure (current: ' + str(self.config.params['NETWORK_ERROR_RETRY_INTERVAL']) + ')?').strip()
 		if inp == '':
 			inp = self.config.params['NETWORK_ERROR_RETRY_INTERVAL']
 		else:
@@ -128,8 +123,7 @@ class PreferenceGuide:
 			except Exception as e:
 				print(bcolors.WARNING + 'Error: {}.'.format(e) + bcolors.ENDC)
 				print(bcolors.WARNING + 'Value did not set.' + bcolors.ENDC)
-		inp = input('\nFiles larger than what size (in MiB) will be uploaded blocks by blocks? (current: ' +
-		            str(self.config.params['BITS_FILE_MIN_SIZE'] / 2 ** 20) + ')?').strip()
+		inp = input('\nFiles larger than what size (in MiB) will be uploaded blocks by blocks? (current: ' + str(self.config.params['BITS_FILE_MIN_SIZE'] / 2 ** 20) + ')?').strip()
 		if inp == '':
 			inp = self.config.params['BITS_FILE_MIN_SIZE']
 		else:
@@ -139,8 +133,7 @@ class PreferenceGuide:
 			except Exception as e:
 				print(bcolors.WARNING + 'Error: {}.'.format(e) + bcolors.ENDC)
 				print(bcolors.WARNING + 'Value did not set.' + bcolors.ENDC)
-		inp = input('\nWhen a file is uploaded blocks by blocks, what is the block size (in KiB)? (current: ' +
-		            str(self.config.params['BITS_BLOCK_SIZE'] / 2 ** 10) + ')?').strip()
+		inp = input('\nWhen a file is uploaded blocks by blocks, what is the block size (in KiB)? (current: ' + str(self.config.params['BITS_BLOCK_SIZE'] / 2 ** 10) + ')?').strip()
 		if inp == '':
 			inp = self.config.params['BITS_BLOCK_SIZE']
 		else:
@@ -154,12 +147,10 @@ class PreferenceGuide:
 
 	def modify_ignore_list(self):
 		if not query_yes_no(bcolors.BOLD + '(STEP 4/4) Do you want to edit the ignore list file?' + bcolors.ENDC):
-			print(bcolors.OKBLUE + 'Skipped. You can manually edit "' +
-			      self.config.APP_IGNORE_FILE + '" at your convenience.' + bcolors.ENDC)
+			print(bcolors.OKBLUE + 'Skipped. You can manually edit "' + self.config.APP_IGNORE_FILE + '" at your convenience.' + bcolors.ENDC)
 			return
 		print('Calling your default editor...')
 		subprocess.call(
 			['${EDITOR:-vi} "' + self.config.APP_IGNORE_FILE + '"'], shell=True)
 		print(
 			bcolors.OKGREEN + 'You have exited from the text editor.' + bcolors.ENDC)
-

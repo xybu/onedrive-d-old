@@ -15,12 +15,11 @@ class TaskManager:
 	"""
 	Task manager abstracts the task queue implemented in SQLite to better
 	control concurrency.
-	
+
 	task status: 0 (added), 1 (fetched), 2 (done, deletable)
 	task types:
-		for dirs: sy (sync), rm (remove), mk (mkdir on server, postwork=[sy])
-		          tr (move local to trash).
-		for files: af (analyze file), up (upload), dl (download, postwork=[add_row]), 
+		for dirs: sy (sync), rm (remove), mk (mkdir on server, postwork=[sy]), tr (move local to trash).
+		for files: af (analyze file), up (upload), dl (download, postwork=[add_row]),
 				mv (move), rf (remove), cp (copy).
 	"""
 	# this semaphore counts the number of tasks in the table
@@ -43,7 +42,7 @@ class TaskManager:
 			TaskManager.db.execute("""
 				CREATE TABLE tasks
 				(type TEXT, local_path TEXT, remote_id TEXT, remote_parent_id TEXT,
-				status INT DEFAULT 0, args TEXT, extra_info TEXT, 
+				status INT DEFAULT 0, args TEXT, extra_info TEXT,
 				UNIQUE(local_path) ON CONFLICT ABORT)
 			""")
 		self.release_lock()
@@ -73,6 +72,7 @@ class TaskManager:
 
 	def add_task(self, type, local_path, remote_id='', remote_parent_id='', status=0, args='', extra_info=''):
 		# print(type + ' ' + local_path)
+		task_added = False
 		self.acquire_lock()
 		try:
 			# delete old pending tasks
@@ -83,10 +83,12 @@ class TaskManager:
 				(type, local_path, remote_id, remote_parent_id, status, args, extra_info)
 			)
 			self.logger.debug('added task "%s" "%s".', type, local_path)
+			task_added = True
 		except sqlite3.IntegrityError:
 			self.logger.debug('failed to add task "%s" "%s".', type, local_path)
 		self.release_lock()
-		self.inc_sem()
+		if task_added:
+			self.inc_sem()
 
 	def get_task(self):
 		self.acquire_lock()
@@ -142,8 +144,8 @@ class EntryManager:
 		if not EntryManager.db_initialized:
 			self.cursor.execute("""
 				CREATE TABLE IF NOT EXISTS entries
-				(parent_path TEXT, name TEXT, isdir INT, remote_id TEXT UNIQUE PRIMARY KEY, 
-				remote_parent_id TEXT PRIMARY_KEY, size INT, client_updated_time TEXT, status TEXT, visited INT, 
+				(parent_path TEXT, name TEXT, isdir INT, remote_id TEXT UNIQUE PRIMARY KEY,
+				remote_parent_id TEXT PRIMARY_KEY, size INT, client_updated_time TEXT, status TEXT, visited INT,
 				UNIQUE(parent_path, name) ON CONFLICT REPLACE)
 			""")
 			self.cursor.execute('UPDATE entries SET visited=0')

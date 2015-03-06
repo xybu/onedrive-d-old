@@ -5,50 +5,38 @@ Main entry of onedrive-d.
 """
 
 import sys
-import logging
-import argparse
+import click
+import daemonocle
 from . import od_glob
 
+# this runs before any daemonocle code
+config = od_glob.get_config_instance()
+is_debug_mode = False
+for arg in sys.argv:
+	if arg == '--debug':
+		od_glob.get_logger(config.params['MIN_LOG_LEVEL']).debug('running in debug mode.')
+		is_debug_mode = True
+		break
+if not is_debug_mode:
+	od_glob.get_logger(config.params['MIN_LOG_LEVEL'], config.params['LOG_FILE_PATH']).debug('running in daemon node.')
 
+
+@click.command(cls=daemonocle.cli.DaemonCLI, daemon_params={'pidfile': config.APP_CONF_PATH + '/onedrive.pid'})
 def main():
-	daemon = None
-	log_level = None
-
-	parser = argparse.ArgumentParser(prog='onedrive-d',
-		description='onedrive-d daemon program.',
-		epilog='For technical support, visit http://github.com/xybu/onedrive-d/issues.')
-
-	parser.add_argument('--log', default='DEBUG',
-		choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-		help='specify the minimum log level. Default: DEBUG')
-
-	parser.add_argument('--ui', default='cli',
-		choices=['cli', 'gtk'],
-		help='specify the user interface. Default: cli')
-
-	args = parser.parse_args()
-
-	if args.log[0] == 'D':
-		log_level = logging.DEBUG
-	elif args.log[0] == 'I':
-		log_level = logging.INFO
-	elif args.log[0] == 'W':
-		log_level = logging.WARNING
-	elif args.log[0] == 'E':
-		log_level = logging.ERROR
+	mon = None
+	if not config.params['USE_GUI']:
+		from . import od_mon_cli
+		mon = od_mon_cli.Monitor()
 	else:
-		log_level = logging.CRITICAL
-	logger = od_glob.get_logger(log_level)
+		from . import od_mon_gtk
+		mon = od_mon_gtk.Monitor()
 
-	if args.ui == 'cli':
-		from . import od_daemon_cli
-		daemon = od_daemon_cli.Daemon()
-	else:
-		from . import od_daemon_gtk
-		daemon = od_daemon_gtk.Daemon()
-
-	# start UI engine
-	daemon.start()
+	# start monitor engine
+	try:
+		mon.start()
+	except KeyboardInterrupt:
+		# for debugging, dump task db
+		mon.stop()
 
 if __name__ == "__main__":
 	main()
