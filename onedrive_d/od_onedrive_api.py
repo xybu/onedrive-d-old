@@ -428,8 +428,6 @@ class OneDriveAPI:
 						self.logger.debug("failed BITS Create-Session request to upload \"%s\". HTTP %d.", local_path, response.status_code)
 						self.logger.debug(response.headers)
 						response.close()
-						fcntl.lockf(source_file, fcntl.LOCK_UN)
-						source_file.close()
 						return None
 				session_id = response.headers['bits-session-id']
 				response.close()
