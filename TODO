@@ -4,6 +4,7 @@ API:
 
 1. finish new API
 2. update database structure
-3. update worker
-4. update monitor
-5. update inotifywait
+3. update config
+4. update worker
+5. update monitor
+6. update inotifywait

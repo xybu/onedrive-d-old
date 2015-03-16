@@ -152,6 +152,7 @@ class EntryManager:
 		EntryManager.lock.acquire()
 		if EntryManager.db_instance is not None:
 			EntryManager.db_instance.close()
+			EntryManager.db_instance = None
 		EntryManager.lock.release()
 
 	def __init__(self, path):
