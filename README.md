@@ -34,10 +34,13 @@ Or you can browse https://github.com/xybu/onedrive-d and download the ZIP file m
 
 (3) Pre-requisites
 
-Your local filesystem must store UTC timestamps, not local time. This is true
-for most Unix filesystems.
+Your local filesystem must store UTC timestamps, not local time. This is true for most Unix filesystems.
 
 onedrive-d requires Python3 intepreter. If Python version is older than 3.4, `python3-pip` is also required.
+
+Python3 intepreter must use Unicode mode (default for most Linux distro) otherwise its string datatype won't work.
+
+The daemon package (`daemonocle`) has a Python dependency `psutil`, which requires system package `python3-dev` installed. If installation fails because of missing `<Python.h>`, check if `python3-dev` package is installed. Not all Linux distro ship this package by default. Pay extra attention to this if your desktop environment is MATE (i.e., if your distribute is Linux Mint or Ubuntu MATE, etc.).
 
 For GUI component to work, Python3 binding of GObject (`python3-gi` package for Debian/Ubuntu, `pygobject3` for Fedora, `python-gobject` for Arch, and `python3-gobject` for OpenSUSE) is needed. [Refer to this article if you want to build PyGObject from source.](https://python-gtk-3-tutorial.readthedocs.org/en/latest/install.html)
 
