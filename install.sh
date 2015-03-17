@@ -42,24 +42,28 @@ case $DISTRIB_ID in
 		PIP_PKG_NAME='python3-pip'
 		PYGOBJECT_PKG_NAME='python3-gi'
 		INOTIFY_PKG_NAME='inotify-tools'
+		PYTHON_DEV_PKG_NAME='python3-dev'
 		;;
 	fedora)
 		PACKAGE_INST='sudo yum install'
 		PIP_PKG_NAME='python3-pip'
 		PYGOBJECT_PKG_NAME='pygobject3'
 		INOTIFY_PKG_NAME='inotify-tools'
+		PYTHON_DEV_PKG_NAME='python3-devel'
 		;;
 	arch|archarm|manjarolinux)
 		PACKAGE_INST='sudo pacman -S --needed'
 		PIP_PKG_NAME='python-pip'
 		PYGOBJECT_PKG_NAME='python-gobject'
 		INOTIFY_PKG_NAME='inotify-tools'
+		PYTHON_DEV_PKG_NAME=''
 		;;
 	opensuse)
 		PACKAGE_INST='sudo zypper install'
 		PIP_PKG_NAME='python3-pip'
 		PYGOBJECT_PKG_NAME='python3-gobject'
 		INOTIFY_PKG_NAME='inotify-tools'
+		PYTHON_DEV_PKG_NAME='python3-devel'
 		;;
 	*)
 		echo -e "\033[31mError: setup script does not support your distro token \e[1m$DISTRIB_ID\e[21m\e[0m."
@@ -73,6 +77,8 @@ if [ ! -x "$(which python3)" ] ; then
 else
 	echo -e "\e[92mpython3 installed...OK\e[0m"
 fi
+
+$PACKAGE_INST $PYTHON_DEV_PKG_NAME
 
 if [ ! -x "$(which pip3)" ] ; then
 	echo -e "\033[31mNotice: pip3 not found on the system.\e[0m"
