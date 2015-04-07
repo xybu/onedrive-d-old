@@ -81,7 +81,8 @@ class WorkerThread(threading.Thread):
 		for entry in remote_entries:
 
 			# skip the entry if ignorable
-			if self.config.ignore_list.is_ignorable(entry['name'], task['local_path']):
+			if self.config.ignore_list and \
+					self.config.ignore_list.is_ignorable(entry['name'], task['local_path']):
 				continue
 
 			local_path = task['local_path'] + '/' + entry['name']
