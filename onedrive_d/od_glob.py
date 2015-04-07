@@ -118,6 +118,8 @@ class ConfigSet:
 		'LAST_RUN_TIMESTAMP': '1970-01-01T00:00:00+0000'
 	}
 
+	logger = get_logger()
+
 	OS_HOSTNAME = os.uname()[1]
 	OS_USERNAME = os.getenv('SUDO_USER')
 
