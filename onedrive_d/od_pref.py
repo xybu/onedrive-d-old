@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 """
 Preference guide dispatcher for onedrive-d.
 """
