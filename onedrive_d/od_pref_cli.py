@@ -10,6 +10,7 @@ import subprocess
 
 from . import od_bootstrap
 from . import od_account
+from . import od_accountdb
 
 
 def open_in_editor(file_path):
@@ -51,22 +52,56 @@ class PreferenceGuide:
 	def __init__(self):
 		self.user_info = od_account.get_user_info()
 		self.config_info = od_account.get_user_config(self.user_info)
-		self.logger = od_bootstrap.get_logger()
+		self.config_file_path = self.user_info['os_user_home'] + '/' + od_account.USER_CONFIG_FILE_PATH
+		self.config_dir_path = os.path.dirname(self.config_file_path)
+		self.account_info = od_account.get_user_account(self.user_info)
 		if self.config_info is None:
-			if not os.path.isdir(od_account.ACCOUNT_INVENTORY):
+			if not os.path.isdir(self.config_dir_path):
+				print(bcolors.RED + 'User config dir "%s" is missing. Try Creating it.' % self.config_dir_path + bcolors.ENDC)
+				if os.path.exists(self.config_dir_path):
+					try:
+						shutil.rmtree(self.config_dir_path)
+					except:
+						pass
 				try:
-					shutil.rmtree(od_account.ACCOUNT_INVENTORY)
-				except:
-					pass
-				try:
-					# create dir owned by root
-					od_bootstrap.mkdir(od_account.ACCOUNT_INVENTORY, 0, 0)
-				except OSError as e:
-					self.logger.critical('Failed to create directory "{0}" as root - {1} (005.{2}).'.format(od_account.ACCOUNT_INVENTORY, e.strerror, e.errno))
+					od_bootstrap.mkdir(self.config_dir_path, 0, 0)
+					print(bcolors.GREEN + 'Successfully created user config directory.' + bcolors.ENDC)
+				except Exception as e:
+					print(bcolors.RED + 'Failed to create config dir - {0} (006.{1}).'.format(e.strerror, e.errno) + bcolors.ENDC)
 					sys.exit(1)
-			# TODO: format config information
+			else:
+				print('Check if user config directory exists... [' + bcolors.GREEN + 'OK' + bcolors.ENDC + ']')
+			print(bcolors.YELLOW + 'Please run step 4 to set up program settings.' + bcolors.ENDC)
 		else:
-			pass
+			print('Load existing user config ... [' + bcolors.GREEN + 'OK' + bcolors.ENDC + ']')
+		if self.account_info is None:
+			if not os.path.isdir(od_accountdb.ACCOUNT_INVENTORY):
+				print(bcolors.RED + 'Account inventory dir "%s" is missing. Try Creating it.' % od_accountdb.ACCOUNT_INVENTORY + bcolors.ENDC)
+				if os.path.exists(od_accountdb.ACCOUNT_INVENTORY):
+					try:
+						shutil.rmtree(od_accountdb.ACCOUNT_INVENTORY)
+					except:
+						pass
+				try:
+					od_bootstrap.mkdir(od_accountdb.ACCOUNT_INVENTORY, 0, 0)
+					print(bcolors.GREEN + 'Successfully created account inventory directory.' + bcolors.ENDC)
+				except OSError as e:
+					print(bcolors.RED + 'Failed to create directory "{0}" as root - {1} (005.{2}).'.format(od_account.ACCOUNT_INVENTORY, e.strerror, e.errno) + bcolors.ENDC)
+					sys.exit(1)
+			accountdb_path = od_accountdb.get_accountdb_path(self.user_info['os_user_uid'])
+			if not os.path.isfile(accountdb_path):
+				print(bcolors.RED + 'User account database "%s" does not exist. Try creating it.' % accountdb_path + bcolors.ENDC)
+				try:
+					od_accountdb.build_empty_accountdb(self.user_info['os_user_uid'])
+					print(bcolors.GREEN + 'Successfully created account database.' + bcolors.ENDC)
+				except Exception as e:
+					print(bcolors.RED + 'Failed to create account database "{0}" - {1} (007.{2}).'.format(accountdb_path, e.strerror, e.errno) + bcolors.ENDC)
+					sys.exit(1)
+			else:
+				print('Check if account database exists ... [' + bcolors.GREEN + 'OK' + bcolors.ENDC + ']')
+			print(bcolors.YELLOW + 'Please run step 1 or 2 to link at least one OneDrive account.' + bcolors.ENDC)
+		else:
+			print('Load existing user account database ... [' + bcolors.GREEN + 'OK' + bcolors.ENDC + ']')
 
 	def start(self):
 		print(bcolors.BLUE + 'Welcome, %s!' % self.user_info['os_user_name'])
@@ -105,26 +140,16 @@ class PreferenceGuide:
 
 	def change_settings(self):
 		print(bcolors.GREEN + 'Edit configuration file for user "%s"...' % self.user_info['os_user_name'] + bcolors.ENDC)
-		config_file_path = self.user_info['os_user_home'] + '/' + od_account.USER_CONFIG_FILE_PATH
-		config_dir_path = os.path.dirname(config_file_path)
-		if not os.path.isdir(config_dir_path):
-			print(bcolors.YELLOW + 'User config dir "%s" is missing. Try Creating it.' % config_dir_path + bcolors.ENDC)
-			try:
-				od_bootstrap.mkdir(config_dir_path, 0, 0)
-			except Exception as e:
-				print(bcolors.RED + 'Failed to create config dir - {0} (006.{1}).'.format(e.strerror, e.errno) + bcolors.ENDC)
-				print(bcolors.RED + 'Action failed.' + bcolors.RED)
-				return
 		if self.config_info is None:
 			print(bcolors.RED + 'Current configuration is missing. Load default.' + bcolors.ENDC)
 			self.config_info = od_account.get_default_config()
-			with open(config_file_path, 'w') as f:
+			with open(self.config_file_path, 'w') as f:
 				self.config_info.write(f)
-		print('Opening config file "%s"...' % config_file_path)
-		open_in_editor(config_file_path)
+		print('Opening config file "%s"...' % self.config_file_path)
+		open_in_editor(self.config_file_path)
 		# read the modified info and sanitize it
 		config_info = od_account.get_user_config(self.user_info)
-		with open(config_file_path, 'w') as f:
+		with open(self.config_file_path, 'w') as f:
 			config_info.write(f)
 		self.config_info = config_info
 		print(bcolors.GREEN + 'Action complete.' + bcolors.ENDC)

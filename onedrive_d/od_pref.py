@@ -28,7 +28,7 @@ def main():
 
 	try:
 		pref_guide.start()
-	except KeyboardInterrupt:
+	except (KeyboardInterrupt, EOFError):
 		print('Exit.')
 		sys.exit(0)
 

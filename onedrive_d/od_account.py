@@ -9,9 +9,9 @@ import pwd
 import configparser
 
 from . import od_bootstrap
+from . import od_accountdb
 
 
-ACCOUNT_INVENTORY = '/etc/onedrived'
 USER_CONFIG_FILE_PATH = '.onedrive/settings_v1.ini'
 
 
@@ -52,26 +52,31 @@ def get_default_config():
 	return ret
 
 
-def get_user_config(user_info, terminate=False):
-	if not os.path.isfile(ACCOUNT_INVENTORY + '/' + str(user_info['os_user_uid']) + '.db'):
+def get_user_account(user_info, terminate=False):
+	if not os.path.isfile(od_accountdb.get_accountdb_path(str(user_info['os_user_uid']))):
 		if terminate:
 			die('User "{0}" ({1}) has not configured onedrive-d (003).'.format(user_info['os_user_name'], user_info['os_user_uid']))
-		else:
-			config_file_path = user_info['os_user_home'] + '/' + USER_CONFIG_FILE_PATH
-			if os.path.isfile(config_file_path):
-				config = configparser.ConfigParser()
-				with open(config_file_path, 'r') as f:
-					config.read_file(f)
-				# sanitize the existing config file
-				default_dict = get_default_config_dict()
-				for section_name in default_dict:
-					if not config.has_section(section_name):
-						config.add_section(section_name)
-					for k in default_dict[section_name]:
-						if not config.has_option(section_name, k):
-							config.set(section_name, k, default_dict[section_name][k])
-				return config
-	return None
+	return None	
+
+
+def get_user_config(user_info, terminate=False):
+	config_file_path = user_info['os_user_home'] + '/' + USER_CONFIG_FILE_PATH
+	if not os.path.isfile(config_file_path):
+		if terminate:
+			die('User "{0}" ({1}) has not configured onedrive-d (003).'.format(user_info['os_user_name'], user_info['os_user_uid']))
+		return None
+	config = configparser.ConfigParser()
+	with open(config_file_path, 'r') as f:
+		config.read_file(f)
+	# sanitize the existing config file
+	default_dict = get_default_config_dict()
+	for section_name in default_dict:
+		if not config.has_section(section_name):
+			config.add_section(section_name)
+		for k in default_dict[section_name]:
+			if not config.has_option(section_name, k):
+				config.set(section_name, k, str(default_dict[section_name][k]))
+	return config
 
 
 def drop_root_privilege(user_info):
@@ -81,3 +86,6 @@ def drop_root_privilege(user_info):
 		os.setuid(user_info['os_user_uid'])
 	except OSError as e:
 		die('Failed to drop root privilege - {0} (004.{1}).'.format(e.strerror, e.errno))
+
+
+
