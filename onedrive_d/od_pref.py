@@ -26,7 +26,11 @@ def main():
 		from . import od_pref_cli
 		pref_guide = od_pref_cli.PreferenceGuide()
 
-	pref_guide.start()
+	try:
+		pref_guide.start()
+	except KeyboardInterrupt:
+		print('Exit.')
+		sys.exit(0)
 
 if __name__ == "__main__":
 	main()

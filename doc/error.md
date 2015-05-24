@@ -18,3 +18,5 @@ Each error message has the format `error_message (id).` where `id` is either a n
 # Preference CLI
 
 `Failed to create directory "/etc/onedrived" as root - {REASON} (005.{ERRNO}).` Cannot create the account inventory directory. Refer to `{REASON}` and `{ERRNO}` for what OS says.
+
+`Failed to create config dir - {REASON} (006.{ERRNO}).` Please check why the directory `~/.onedrive` cannot be created.

@@ -6,9 +6,15 @@ It guides user to set up the configurations step by step.
 import os
 import sys
 import shutil
+import subprocess
 
 from . import od_bootstrap
 from . import od_account
+
+
+def open_in_editor(file_path):
+	subprocess.call(
+			['${EDITOR:-vi} "' + file_path + '"'], shell=True)
 
 
 def query_yes_no(question, default='yes'):
@@ -63,6 +69,7 @@ class PreferenceGuide:
 			pass
 
 	def start(self):
+		print(bcolors.BLUE + 'Welcome, %s!' % self.user_info['os_user_name'])
 		while True:
 			print(bcolors.BLUE + bcolors.BOLD + 'Select one action from the following list:' + bcolors.ENDC)
 			print(bcolors.BLUE + '1. Add a new OneDrive account' + bcolors.ENDC)
@@ -72,13 +79,13 @@ class PreferenceGuide:
 			print(bcolors.BLUE + '5. Exit wizard' + bcolors.ENDC)
 			choice = input(bcolors.BOLD + 'Which action do you want to perform (1-5): ' + bcolors.ENDC).strip()
 			if choice == '1':
-				add_onedrive_account()
+				self.add_onedrive_account()
 			elif choice == '2':
-				edit_onedrive_account()
+				self.edit_onedrive_account()
 			elif choice == '3':
-				remove_onedrive_account()
+				self.remove_onedrive_account()
 			elif choice == '4':
-				change_settings()
+				self.change_settings()
 			elif choice == '5':
 				sys.exit(0)
 			else:
@@ -97,4 +104,27 @@ class PreferenceGuide:
 		pass
 
 	def change_settings(self):
-		pass
+		print(bcolors.GREEN + 'Edit configuration file for user "%s"...' % self.user_info['os_user_name'] + bcolors.ENDC)
+		config_file_path = self.user_info['os_user_home'] + '/' + od_account.USER_CONFIG_FILE_PATH
+		config_dir_path = os.path.dirname(config_file_path)
+		if not os.path.isdir(config_dir_path):
+			print(bcolors.YELLOW + 'User config dir "%s" is missing. Try Creating it.' % config_dir_path + bcolors.ENDC)
+			try:
+				od_bootstrap.mkdir(config_dir_path, 0, 0)
+			except Exception as e:
+				print(bcolors.RED + 'Failed to create config dir - {0} (006.{1}).'.format(e.strerror, e.errno) + bcolors.ENDC)
+				print(bcolors.RED + 'Action failed.' + bcolors.RED)
+				return
+		if self.config_info is None:
+			print(bcolors.RED + 'Current configuration is missing. Load default.' + bcolors.ENDC)
+			self.config_info = od_account.get_default_config()
+			with open(config_file_path, 'w') as f:
+				self.config_info.write(f)
+		print('Opening config file "%s"...' % config_file_path)
+		open_in_editor(config_file_path)
+		# read the modified info and sanitize it
+		config_info = od_account.get_user_config(self.user_info)
+		with open(config_file_path, 'w') as f:
+			config_info.write(f)
+		self.config_info = config_info
+		print(bcolors.GREEN + 'Action complete.' + bcolors.ENDC)

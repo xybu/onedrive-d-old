@@ -6,11 +6,13 @@ associated with the OS user.
 import os
 import sys
 import pwd
+import configparser
 
 from . import od_bootstrap
 
 
 ACCOUNT_INVENTORY = '/etc/onedrived'
+USER_CONFIG_FILE_PATH = '.onedrive/settings_v1.ini'
 
 
 def die(msg):
@@ -36,13 +38,39 @@ def get_user_info():
 	}
 
 
+def get_default_config_dict():
+	return {
+		'Intervals': {
+			'NETWORK_RETRY_INTERVAL': 20
+		}
+	}
+
+
+def get_default_config():
+	ret = configparser.ConfigParser()
+	ret.read_dict(get_default_config_dict())
+	return ret
+
+
 def get_user_config(user_info, terminate=False):
 	if not os.path.isfile(ACCOUNT_INVENTORY + '/' + str(user_info['os_user_uid']) + '.db'):
 		if terminate:
 			die('User "{0}" ({1}) has not configured onedrive-d (003).'.format(user_info['os_user_name'], user_info['os_user_uid']))
 		else:
-			return None
-	# TODO: load information from database
+			config_file_path = user_info['os_user_home'] + '/' + USER_CONFIG_FILE_PATH
+			if os.path.isfile(config_file_path):
+				config = configparser.ConfigParser()
+				with open(config_file_path, 'r') as f:
+					config.read_file(f)
+				# sanitize the existing config file
+				default_dict = get_default_config_dict()
+				for section_name in default_dict:
+					if not config.has_section(section_name):
+						config.add_section(section_name)
+					for k in default_dict[section_name]:
+						if not config.has_option(section_name, k):
+							config.set(section_name, k, default_dict[section_name][k])
+				return config
 	return None
 
 
