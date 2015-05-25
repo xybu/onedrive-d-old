@@ -11,25 +11,25 @@ from . import od_bootstrap
 
 instance = None
 
-def get_instance():
+def get_instance(network_retry_interval=30):
 	"""Sleep queue manager is a singleton"""
 	global instance
 	if instance is None:
-		instance = SleepQueueManager()
+		instance = SleepQueueManager(network_retry_interval)
 		instance.start()
 	return instance
 
 
 class SleepQueueManager(threading.Thread):
 
-	def __init__(self):
+	def __init__(self, network_retry_interval):
 		super().__init__()
 		self.name = 'sleepq'
 		self.daemon = True
 		self.sleep_queue = queue.Queue()
 		self.conditions = {}
 		self.logger = od_bootstrap.get_logger()
-		# self.wait_interval = od_glob.get_config_instance().params['NETWORK_ERROR_RETRY_INTERVAL']
+		self.wait_interval = network_retry_interval
 
 	def hang_caller(self):
 		"""
@@ -40,10 +40,10 @@ class SleepQueueManager(threading.Thread):
 			threading.current_thread().ident] = cond = threading.Condition()
 		self.sleep_queue.put(threading.current_thread())
 		cond.acquire()
-		self.logger.info('put to sleep due to networking error.')
+		self.logger.info('put to sleep due to network error.')
 		cond.wait()
 		cond.release()
-		self.logger.info('waken up by ThreadManager.')
+		self.logger.info('waken up from sleep queue.')
 		del self.conditions[threading.current_thread().ident]
 
 	def is_connected(self, host_name='onedrive.com', host_port='80'):
@@ -55,7 +55,7 @@ class SleepQueueManager(threading.Thread):
 			s = socket.create_connection((host_ip, host_port), 1)
 			s.shutdown(socket.SHUT_RDWR)
 			s.close()
-			self.logger.debug('able to realize "' + host_name + ':' + host_port + '".')
+			self.logger.debug('realized "' + host_name + ':' + host_port + '".')
 			return True
 		except:
 			self.logger.debug('cannot realize "' + host_name + ':' + host_port + '".')

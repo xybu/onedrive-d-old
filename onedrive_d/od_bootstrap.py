@@ -5,6 +5,7 @@ Global functions and configurations.
 import os
 import logging
 import atexit
+from datetime import datetime, timezone
 
 
 Log = None
@@ -35,3 +36,7 @@ def mkdir(path, uid, gid = -1):
 	"""Create a path and set up owner uid."""
 	os.mkdir(path)
 	os.chown(path, uid, gid)
+
+
+def now():
+	return datetime.now(timezone.utc)

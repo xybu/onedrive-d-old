@@ -18,8 +18,9 @@ def build_empty_accountdb(uid):
 	conn.execute("""
 			CREATE TABLE IF NOT EXISTS accounts(
 				account_id TEXT UNIQUE PRIMARY KEY, 
-				account_token_type TEXT, 
-				token_expiration_time INT, 
+				account_type TEXT,
+				token_type TEXT, 
+				token_expiration INT, 
 				access_token TEXT, 
 				refresh_token TEXT
 			)
@@ -58,4 +59,4 @@ def build_empty_accountdb(uid):
 class AccountDatabaseManager:
 
 	def __init__(self, uid):
-		self.conn = sqlite3.connect(ACCOUNT_INVENTORY + '/' + str(uid) + '.db', isolation_level=None)
+		self.conn = sqlite3.connect(get_accountdb_path(uid), isolation_level=None)
