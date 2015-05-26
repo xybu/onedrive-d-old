@@ -1,5 +1,15 @@
 """
 OneDrive API class and exception definitions.
+	OneDriveException -- base class of all API exceptions.
+	OneDriveClient -- contains client-level information.
+		Can derive OneDriveAccount instances.
+	OneDriveAccount -- contains account-level information. 
+		Some methods rely on OneDriveClient.
+		Can derive OneDriveEntDrive instances.
+	OneDriveEntDrive -- abstracts Drive resource.
+		Can derive OneDriveEntItem instances.
+	OneDriveEntItem -- abstracts files, folders, and other resources.
+	OneDriveEntOwner -- abstracts owner identity.
 """
 
 import time
@@ -18,14 +28,28 @@ class OneDriveException(Exception):
 
 	def __init__(self, error_with_description):
 		super().__init__()
-		self.errno = error_with_description['error']
-		self.strerror = error_with_description['error_description']
+		if 'error_description' in error_with_description:
+			self.errno = error_with_description['error']
+			self.strerror = error_with_description['error_description']
+		elif 'error' in error_with_description:
+			self.errno = error_with_description['error']['code']
+			self.strerror = error_with_description['error']['message']
+			if self.errno == 'request_token_expired':
+				self.__class__ = OneDriveAuthException
+		else:
+			raise ValueError('Unknown OneDrive error format - ' + str(error_with_description))
 
 	def __str__(self):
 		return self.strerror + ' (' + self.errno + ')'
 
 
 class OneDriveAuthException(OneDriveException):
+	"""
+	There are two flows to generate such type of exception:
+		(1) When exchanging / renewing a token
+		(2) When requesting a resource / performing an action
+	The second flow is usually caught and will cause a retry.
+	"""
 	pass
 
 
@@ -38,14 +62,23 @@ class OneDriveAccount:
 		(2) call constructor with Non-None saved_record to restore an old account.
 	"""
 
-	def __init__(self, account_type='personal', saved_record=None):
+	def __init__(self, account_type='personal', saved_record=None, client=None):
 		self.account_type = account_type
 		self.session = requests.Session()
+		self.client = client
+		if account_type == 'personal':
+			self.api_url = 'https://api.onedrive.com/v1.0'
+		elif account_type == 'business':
+			# self.api_url = 'https://{tenant}-my.sharepoint.com/_api/v2.0'
+			raise NotImplementedError('Support for OneDrive for Business has not been implemented yet.')
 		if saved_record is not None:
 			self.__dict__.update(saved_record)
 			self.session.headers.update({'Authorization': 'Bearer ' + self.access_token})
 
-	def exchange_token(self, client, code=None, uri=None, redirect_uri=APP_REDIRECT_URI):
+	def set_client(self, client):
+		self.client = client
+
+	def exchange_token(self, code=None, uri=None, redirect_uri=APP_REDIRECT_URI):
 		if uri is not None and '?' in uri:
 			qs_dict = urllib.parse.parse_qs(uri.split('?')[1])
 			if 'code' in qs_dict:
@@ -53,8 +86,8 @@ class OneDriveAccount:
 		if code is None:
 			raise ValueError('Authorization code is not specified.')
 		params = {
-			'client_id': client.client_id,
-			'client_secret': client.client_secret,
+			'client_id': self.client.client_id,
+			'client_secret': self.client.client_secret,
 			'redirect_uri': redirect_uri,
 			'code': code,
 			'grant_type': 'authorization_code'
@@ -79,11 +112,11 @@ class OneDriveAccount:
 		self.token_expiration = int(time.time()) + oauth_token_response['expires_in']
 		self.session.headers.update({'Authorization': 'Bearer ' + self.access_token})
 
-	def renew_token(self, client, redirect_uri = APP_REDIRECT_URI):
+	def renew_token(self, redirect_uri = APP_REDIRECT_URI):
 		# assume self.refresh_token has been set
 		params = {
-			'client_id': client.client_id,
-			'client_secret': client.client_secret,
+			'client_id': self.client.client_id,
+			'client_secret': self.client.client_secret,
 			'redirect_uri': redirect_uri,
 			'refresh_token': self.refresh_token,
 			'grant_type': 'refresh_token'
@@ -94,6 +127,7 @@ class OneDriveAccount:
 					data=params, verify=True)
 				if req.status_code != requests.codes.ok:
 					raise OneDriveAuthException(req.json())
+				OneDriveClient.logger.debug('Access token renewed.')
 				return self.load_token(req.json())
 			except requests.exceptions.ConnectionError as e:
 				OneDriveClient.logger.warning('Connection error - %s' % e)
@@ -110,17 +144,19 @@ class OneDriveAccount:
 				if req.status_code != requests.codes.ok:
 					raise OneDriveException(req.json())
 				return req.json()
+			except OneDriveAuthException:
+				self.renew_token()
 			except requests.exceptions.ConnectionError as e:
 				OneDriveClient.logger.warning('Connection error - %s' % e)
 				OneDriveClient.sleep_queue.hang_caller()
 
-	def sign_out(self, client, redirect_uri=APP_REDIRECT_URI):
+	def sign_out(self, redirect_uri=APP_REDIRECT_URI):
 		"""
 		Sign the account out. The account object is still valid until it is
 		destroyed.
 		"""
 		params = {
-			'client_id': client.client_id,
+			'client_id': self.client.client_id,
 			'redirect_uri': redirect_uri
 		}
 		uri = 'https://login.live.com/oauth20_logout.srf?' + urllib.parse.urlencode(params)
@@ -128,8 +164,45 @@ class OneDriveAccount:
 			try:
 				req = self.session.get(uri)
 				if req.status_code == requests.codes.ok:
-					client.delete_account(self)
+					self.client.delete_account(self)
 					return True
+			except OneDriveAuthException:
+				self.renew_token()
+			except requests.exceptions.ConnectionError as e:
+				OneDriveClient.logger.warning('Connection error - %s' % e)
+				OneDriveClient.sleep_queue.hang_caller()
+
+	def get_all_drives(self):
+		uri = self.api_url + '/drives'
+		while True:
+			try:
+				req = self.session.get(uri)
+				if req.status_code != requests.codes.ok:
+					raise OneDriveException(req.json())
+				ret = {}
+				for d in req.json()['value']:
+					o = OneDriveEntDrive(self, api_json=d)
+					ret[o.id] = o
+				return ret
+			except OneDriveAuthException:
+				self.renew_token()
+			except requests.exceptions.ConnectionError as e:
+				OneDriveClient.logger.warning('Connection error - %s' % e)
+				OneDriveClient.sleep_queue.hang_caller()
+
+	def get_drive(self, drive_id=None):
+		"""If drive_id is None, return the default Drive."""
+		uri = self.api_url + '/drive'
+		if drive_id is not None:
+			uri = uri + 's/' + drive_id
+		while True:
+			try:
+				req = self.session.get(uri)
+				if req.status_code != requests.codes.ok:
+					raise OneDriveException(req.json())
+				return OneDriveEntDrive(self, api_json=req.json())
+			except OneDriveAuthException:
+				self.renew_token()
 			except requests.exceptions.ConnectionError as e:
 				OneDriveClient.logger.warning('Connection error - %s' % e)
 				OneDriveClient.sleep_queue.hang_caller()
@@ -170,7 +243,7 @@ class OneDriveClient:
 		Get a new account object from auth code or auth uri, and then
 		add the object to account dict.
 		"""
-		acct = OneDriveAccount(account_type)
+		acct = OneDriveAccount(account_type, client=self)
 		acct.exchange_token(self, code, uri)
 		self.add_account(acct)
 		return acct
@@ -183,3 +256,78 @@ class OneDriveClient:
 
 	def delete_account(self, account):
 		del self.accounts[account.account_id]
+
+
+class OneDriveEntOwner:
+
+	def __init__(self, json_value):
+		if 'user' in json_value:
+			self.owner_id = json_value['user']['id']
+			self.owner_name = json_value['user']['displayName']
+			self.owner_type = 'user'
+		else:
+			raise ValueError('Unknown owner type: ' + str(json_value))
+
+	def dump(self):
+		return self.__dict__
+
+	def __str__(self):
+		return "Owner Resource({0}, {1}, {2})".format(self.owner_type, self.owner_id, self.owner_name)
+
+
+class OneDriveEntDrive:
+
+	def __init__(self, account=None, api_json=None, saved_record=None):
+		self.account = account
+		if api_json is not None:
+			self.local_root = None
+			self.load_from_api_response(api_json)
+		elif saved_record is not None:
+			self.load_from_saved_record(saved_record)
+
+	def load_from_api_response(self, api_json):
+		self.id = api_json['id']
+		self.drive_type = api_json['driveType']
+		self.owner = OneDriveEntOwner(api_json['owner'])
+		self.quota_total = api_json['quota']['total']
+		self.quota_used = api_json['quota']['used']
+		self.quota_remaining = api_json['quota']['remaining']
+		self.quota_deleted = api_json['quota']['deleted']
+		self.quota_state = api_json['quota']['state']
+		# for a new Drive, one needs to set a corresponding local_path later
+
+	def load_from_saved_record(self, saved_record):
+		self.owner = OneDriveEntOwner({
+			saved_record['owner_type']: {
+				'id': saved_record['owner_id'],
+				'displayName': saved_record['owner_name']
+			}
+		})
+		del saved_record['owner_type']
+		del saved_record['owner_name']
+		del saved_record['owner_id']
+		self.__dict__.update(saved_record)
+
+	def set_account(self, account):
+		self.account = account
+
+	def set_local_root(self, path):
+		self.local_root = path
+
+	def get_root(self, expand='', children_only=False):
+		pass
+
+	def get_changes(self):
+		pass
+
+	def find_item(self, q):
+		pass
+
+	def dump(self):
+		return self.__dict__
+
+	def __str__(self):
+		return 'Drive(' + str(self.__dict__) + ')'
+
+class OneDriveEntItem:
+	pass

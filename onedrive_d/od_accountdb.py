@@ -19,6 +19,7 @@ def build_empty_accountdb(uid):
 			CREATE TABLE IF NOT EXISTS accounts(
 				account_id TEXT UNIQUE PRIMARY KEY, 
 				account_type TEXT,
+				tenant TEXT,
 				token_type TEXT, 
 				token_expiration INT, 
 				access_token TEXT, 
@@ -27,14 +28,17 @@ def build_empty_accountdb(uid):
 		""")
 	conn.execute("""
 			CREATE TABLE IF NOT EXISTS drives(
-				drive_id TEXT UNIQUE PRIMARY KEY,
-				drive_owner_id TEXT,
-				drive_owner_type TEXT,
-				drive_quota_total INT,
-				drive_quota_used INT,
-				drive_quota_free INT,
-				drive_state TEXT,
-				drive_local_root TEXT
+				id TEXT UNIQUE PRIMARY KEY,
+				owner_id TEXT,
+				owner_name TEXT,
+				owner_type TEXT,
+				quota_total INT,
+				quota_used INT,
+				quota_remaining INT,
+				quota_deleted INT,
+				quota_state TEXT,
+				drive_type TEXT,
+				local_root TEXT
 			)
 		""")
 	conn.execute("""
