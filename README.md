@@ -26,11 +26,11 @@ rm -rfv ~/.onedrive
 (2) Grab the source code
 
 ```bash
-git clone https://github.com/xybu/onedrive-d.git
-cd onedrive-d
+git clone https://github.com/xybu/onedrive-d-old.git
+cd onedrive-d-old
 ```
 
-Or you can browse https://github.com/xybu/onedrive-d and download the ZIP file manually.
+Or you can browse https://github.com/xybu/onedrive-d-old and download the ZIP file manually.
 
 (3) Pre-requisites
 
