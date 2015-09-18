@@ -26,11 +26,11 @@ rm -rfv ~/.onedrive
 (2) Grab the source code
 
 ```bash
-git clone https://github.com/xybu/onedrive-d.git
+git clone https://github.com/xybu/onedrive-d-old.git
 cd onedrive-d
 ```
 
-Or you can browse https://github.com/xybu/onedrive-d and download the ZIP file manually.
+Or you can browse https://github.com/xybu/onedrive-d-old and download the ZIP file manually.
 
 (3) Pre-requisites
 
@@ -118,6 +118,8 @@ Note that the commands above are no longer valid after installing the package to
 Refer to step 1 of section "Installation".
 
 ## Notes for Users
+
+Note that this is the older version.  the current version is still in development.  If you are having problems with python make sure you have the correct version and that you have installed the correct modules (i.e. apt-get install python3-dev).
 
 ### Data Integrity
 
