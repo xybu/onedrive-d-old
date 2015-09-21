@@ -37,7 +37,7 @@ fi
 
 case $DISTRIB_ID in
 	# Debian/Ubuntu family
-	elementaryos|debian|ubuntu|linuxmint)
+	elementaryos|debian|ubuntu|linuxmint|raspbian)
 		PACKAGE_INST='sudo apt-get install'
 		PIP_PKG_NAME='python3-pip'
 		PYGOBJECT_PKG_NAME='python3-gi'
