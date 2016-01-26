@@ -118,8 +118,6 @@ class ConfigSet:
 		'LAST_RUN_TIMESTAMP': '1970-01-01T00:00:00+0000'
 	}
 
-	logger = get_logger()
-
 	OS_HOSTNAME = os.uname()[1]
 	OS_USERNAME = os.getenv('SUDO_USER')
 
@@ -166,7 +164,7 @@ class ConfigSet:
 				self.ignore_list = od_ignore_list.IgnoreList(
 					ConfigSet.APP_IGNORE_FILE, ConfigSet.params['ONEDRIVE_ROOT_PATH'])
 			else:
-				ConfigSet.logger.info('ignore list file was not found.')
+				get_logger().info('ignore list file was not found.')
 				ConfigSet.ignore_list = None
 
 	def set_root_path(self, path):
