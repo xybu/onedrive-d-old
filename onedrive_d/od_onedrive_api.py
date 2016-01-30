@@ -430,7 +430,7 @@ class OneDriveAPI:
 		self.logger.debug('getting session token for BITS upload...')
 		while True:
 			try:
-				response = self.http_client.request('post', url, headers=headers)
+				response = self.http_client.request('post', url, headers=headers, verify=False)
 				if response.status_code != 201:
 					if 'www-authenticate' in response.headers and 'invalid_token' in response.headers['www-authenticate']:
 						response.close()
@@ -469,7 +469,7 @@ class OneDriveAPI:
 					'BITS-Packet-Type': 'Fragment',
 					'BITS-Session-Id': session_id,
 					'Content-Range': 'bytes {}-{}/{}'.format(source_cursor, target_cursor, source_size)
-				})
+				}, verify=False)
 				if response.status_code != requests.codes.ok:
 					# unknown error. better log it for future analysis
 					self.logger.debug('an error occurred uploading the block. HTTP %d.', response.status_code)
