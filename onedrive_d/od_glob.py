@@ -7,6 +7,7 @@ Global variables for onedrive_d.
 import os
 import sys
 import logging
+import logging.handlers
 import atexit
 import json
 from calendar import timegm
@@ -44,7 +45,7 @@ def get_logger(level=logging.DEBUG, file_path=None):
 		logger_instance.setLevel(level)
 		if file_path is not None:
 			logger_instance.propagate = False
-			logger_fh = logging.WatchedFileHandler(file_path, 'a')
+			logger_fh = logging.handlers.WatchedFileHandler(file_path, 'a')
 			logger_fh.setLevel(level)
 			logger_instance.addHandler(logger_fh)
 		atexit.register(flush_log_at_shutdown)
