@@ -167,7 +167,7 @@ class WorkerThread(threading.Thread):
 				if entry['name'] in local_entries:
 					local_entries.remove(entry['name'])
 			else:
-				self.logger.info('skipped file "' + task['local_path'] + '/' + entry['name'] + '" of unsupported type "' + entry['type'] + '".')
+				self.logger.warning('skipped file "' + task['local_path'] + '/' + entry['name'] + '" of unsupported type "' + entry['type'] + '".')
 
 		for ent_name in local_entries:
 			# untouched local files
