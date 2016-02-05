@@ -425,39 +425,44 @@ class WorkerThread(threading.Thread):
 	def run(self):
 		self.taskmgr = od_sqlite.TaskManager()
 		self.entrymgr = od_sqlite.EntryManager()
-		while self.running:		# not self.stop_event.is_set():
-			self.taskmgr.dec_sem()
-			task = self.taskmgr.get_task()
-			if task is None:
-				self.logger.debug('got null task.')
-				continue
+		try:
+			while self.running:		# not self.stop_event.is_set():
+				self.taskmgr.dec_sem()
+				task = self.taskmgr.get_task()
+				if task is None:
+					self.logger.debug('got null task.')
+					continue
 
-			self.logger.debug('got task: %s on "%s"', task['type'], task['local_path'])
+				self.logger.debug('got task: %s on "%s"', task['type'], task['local_path'])
 
-			self.is_busy = True
-			od_inotify_thread.INotifyThread.pause_event.set()
-			if task['type'] == 'sy':
-				self.sync_dir(task)
-			elif task['type'] == 'rm':
-				self.remove_dir(task)
-			elif task['type'] == 'mk':
-				self.make_remote_dir(task)
-			elif task['type'] == 'up':
-				self.upload_file(task)
-			elif task['type'] == 'dl':
-				self.download_file(task)
-			elif task['type'] == 'mv':
-				self.move_remote_entry(task)
-			elif task['type'] == 'rf':
-				self.remove_file(task)
-			elif task['type'] == 'af':
-				pass
-			elif task['type'] == 'cp':
-				pass
-			else:
-				raise Exception('Unknown task type "' + task['type'] + '".')
-			od_inotify_thread.INotifyThread.pause_event.clear()
-			self.is_busy = False
+				self.is_busy = True
+				od_inotify_thread.INotifyThread.pause_event.set()
+				if task['type'] == 'sy':
+					self.sync_dir(task)
+				elif task['type'] == 'rm':
+					self.remove_dir(task)
+				elif task['type'] == 'mk':
+					self.make_remote_dir(task)
+				elif task['type'] == 'up':
+					self.upload_file(task)
+				elif task['type'] == 'dl':
+					self.download_file(task)
+				elif task['type'] == 'mv':
+					self.move_remote_entry(task)
+				elif task['type'] == 'rf':
+					self.remove_file(task)
+				elif task['type'] == 'af':
+					pass
+				elif task['type'] == 'cp':
+					pass
+				else:
+					raise Exception('Unknown task type "' + task['type'] + '".')
+				od_inotify_thread.INotifyThread.pause_event.clear()
+				self.is_busy = False
+		except Exception as e:
+			self.logger.exception('od_unexpected_exception')
+			raise
+			
 		self.taskmgr = None
 		self.entrymgr.close()
 		self.logger.debug('stopped.')
