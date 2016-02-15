@@ -271,6 +271,7 @@ class WorkerThread(threading.Thread):
 						# just fix the record
 						self.entrymgr.update_entry(local_path=local_path, obj=entry)
 					else:
+						# in some cases the API responds with a incorrect file size: http://stackoverflow.com/a/27031491, so this shouldn't be trusted
 						self.logger.warning('case1: ' + str(local_mtime) + ',' +
 											str(local_fsize) + ' vs ' + str(remote_mtime) + ',' + str(entry['size']))
 						new_path = self.resolve_conflict(local_path, self.config.OS_HOSTNAME)
