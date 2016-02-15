@@ -88,9 +88,12 @@ class Monitor:
 			self.entrymgr.close()
 			self.logger.debug('entry manager closed.')
 		if self.inotify_thread is not None:
-			self.inotify_thread.stop()
-			self.inotify_thread.join()
-			self.logger.debug('inotify thread stopped.')
+			try:
+				self.inotify_thread.stop()
+				self.inotify_thread.join()
+				self.logger.debug('inotify thread stopped.')
+			except Exception as e:
+				self.logger.exception('inotify cleanup exception')
 		if self.taskmgr is not None:
 			self.taskmgr.clean_tasks()
 			self.logger.debug('task queue cleaned.')
