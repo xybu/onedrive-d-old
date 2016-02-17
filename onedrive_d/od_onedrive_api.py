@@ -28,7 +28,10 @@ import requests
 from time import sleep
 from . import od_glob
 from . import od_thread_manager
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
+try:
+	from requests.packages.urllib3.exceptions import InsecureRequestWarning
+except:
+	pass
 
 api_instance = None
 
@@ -97,7 +100,10 @@ class OneDriveAPI:
 	threadman = od_thread_manager.get_instance()
 
 	def __init__(self, client_id, client_secret, client_scope=CLIENT_SCOPE, redirect_uri=REDIRECT_URI):
-		requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+		try:
+			requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+		except:
+			pass
 		self.client_access_token = None
 		self.client_refresh_token = None
 		self.client_id = client_id
