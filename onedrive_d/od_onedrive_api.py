@@ -654,6 +654,10 @@ class OneDriveAPI:
 		# fcntl.lockf(f, fcntl.LOCK_UN)
 		return True
 
+	def get_size(self, entry_id):
+		r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/content', verify=False)
+		self.logger.info('filesize ' + entry_id + ' size is: ' + r.headers['content-length'])
+	
 	def get(self, entry_id, local_path=None):
 		"""
 		Fetching content of OneNote files will raise OneDriveAPIException:

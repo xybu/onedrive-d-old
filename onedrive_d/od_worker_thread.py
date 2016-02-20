@@ -274,14 +274,15 @@ class WorkerThread(threading.Thread):
 						# in some cases the API responds with a incorrect file size: http://stackoverflow.com/a/27031491, so this shouldn't be trusted
 						self.logger.warning('case1: ' + str(local_mtime) + ',' +
 											str(local_fsize) + ' vs ' + str(remote_mtime) + ',' + str(entry['size']))
-						new_path = self.resolve_conflict(local_path, self.config.OS_HOSTNAME)
-						if new_path is None:
-							self.logger.critical('cannot rename file "' + local_path + '" to avoid conflict. Skip the conflicting remote file.')
-							return
-						# add the renamed local file to list so as to upload it later
-						local_entries.append(os.path.basename(new_path))
-						# download the remote file to the path
-						self.taskmgr.add_task('dl', local_path, entry['id'], entry['parent_id'], args='add_row,', extra_info=json.dumps(entry))
+						return
+						# new_path = self.resolve_conflict(local_path, self.config.OS_HOSTNAME)
+						# if new_path is None:
+						# 	self.logger.critical('cannot rename file "' + local_path + '" to avoid conflict. Skip the conflicting remote file.')
+						# 	return
+						# # add the renamed local file to list so as to upload it later
+						# local_entries.append(os.path.basename(new_path))
+						# # download the remote file to the path
+						# self.taskmgr.add_task('dl', local_path, entry['id'], entry['parent_id'], args='add_row,', extra_info=json.dumps(entry))
 				else:
 					# we have a previous record for reference
 					if previous_entry['remote_id'] == entry['id']:

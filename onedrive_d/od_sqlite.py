@@ -116,12 +116,24 @@ class TaskManager:
 		self.acquire_lock()
 		self.cursor.execute('DELETE FROM tasks WHERE rowid=?', (task_id, ))
 		self.release_lock()
+		self.count_tasks()
 
 	def clean_tasks(self):
 		self.acquire_lock()
 		self.cursor.execute('DELETE FROM tasks')
 		self.release_lock()
-
+		
+	def count_tasks(self):
+		self.acquire_lock();
+		self.cursor.execute('SELECT COUNT(*) FROM tasks')
+		row = self.cursor.fetchone();
+		if row is None:
+			self.release_lock();
+			return None
+		self.release_lock()
+		if row[0] == 0:
+			self.logger.info('No more tasks in queue')
+		
 	def dump(self):
 		self.acquire_lock()
 		ret = TaskManager.db.iterdump()
