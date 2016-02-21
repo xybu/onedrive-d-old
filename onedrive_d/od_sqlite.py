@@ -129,10 +129,16 @@ class TaskManager:
 		row = self.cursor.fetchone();
 		if row is None:
 			self.release_lock();
-			return None
+			return
 		self.release_lock()
 		if row[0] == 0:
 			self.logger.info('No more tasks in queue')
+			return
+		if row[0] % 10 == 0:
+			self.logger.info('Got ' + str(row[0]) + ' tasks in queue')
+			return
+		self.logger.debug('Got ' + str(row[0]) + ' tasks in queue')	
+		
 		
 	def dump(self):
 		self.acquire_lock()

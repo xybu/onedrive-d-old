@@ -272,7 +272,7 @@ class WorkerThread(threading.Thread):
 						self.entrymgr.update_entry(local_path=local_path, obj=entry)
 					else:
 						# in some cases the API responds with a incorrect file size: http://stackoverflow.com/a/27031491, so this shouldn't be trusted
-						self.logger.warning('case1: ' + str(local_mtime) + ',' +
+						self.logger.warning('case1 (' + local_path + '): ' + str(local_mtime) + ',' +
 											str(local_fsize) + ' vs ' + str(remote_mtime) + ',' + str(entry['size']))
 						return
 						# new_path = self.resolve_conflict(local_path, self.config.OS_HOSTNAME)
@@ -296,7 +296,7 @@ class WorkerThread(threading.Thread):
 						elif local_mtime != remote_mtime or entry['client_updated_time'] != previous_entry['client_updated_time']:
 							# there may be more than one revisions between them
 							# better keep both
-							self.logger.warning('case2: ' + str(local_mtime) + ',' +
+							self.logger.warning('case2 (' + local_path + '): ' + str(local_mtime) + ',' +
 												str(local_fsize) + ' vs ' + str(remote_mtime) + ',' + str(entry['size']))
 							new_path = self.resolve_conflict(local_path, self.config.OS_HOSTNAME)
 							if new_path is None:
@@ -317,7 +317,7 @@ class WorkerThread(threading.Thread):
 						if local_mtime != od_glob.str_to_time(previous_entry['client_updated_time']):
 							# the local file was modified since its last sync
 							# better keep it
-							self.logger.warning('case3: ' + str(local_mtime) + ',' + str(local_fsize) + ' vs ' + str(
+							self.logger.warning('case3 (' + local_path + '): ' + str(local_mtime) + ',' + str(local_fsize) + ' vs ' + str(
 								od_glob.str_to_time(previous_entry['client_updated_time'])) + ',' + str(previous_entry['size']))
 							new_path = self.resolve_conflict(local_path, self.config.OS_HOSTNAME)
 							if new_path is None:
