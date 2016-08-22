@@ -429,7 +429,7 @@ class OneDriveAPI:
 		# BITS: Create-Session
 		headers = {
 			'X-Http-Method-Override': 'BITS_POST',
-			'Content-Length': 0,
+			'Content-Length': '0',
 			'BITS-Packet-Type': 'Create-Session',
 			'BITS-Supported-Protocols': '{7df0354d-249b-430f-820d-3d2a9bef4931}'
 		}
@@ -513,7 +513,7 @@ class OneDriveAPI:
 			'X-Http-Method-Override': 'BITS_POST',
 			'BITS-Packet-Type': 'Close-Session',
 			'BITS-Session-Id': session_id,
-			'Content-Length': 0
+			'Content-Length': '0'
 		}
 		while True:
 			try:
