@@ -203,7 +203,7 @@ class OneDriveAPI:
 		}
 		while True:
 			try:
-				request = requests.post(OneDriveAPI.OAUTH_TOKEN_URI, data=params)
+				request = requests.post(OneDriveAPI.OAUTH_TOKEN_URI, data=params, verify=False)
 				response = self.parse_response(request, OneDriveAPIException)
 				self.set_access_token(response['access_token'])
 				self.set_refresh_token(response['refresh_token'])
