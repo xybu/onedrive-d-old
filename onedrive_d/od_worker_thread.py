@@ -167,7 +167,7 @@ class WorkerThread(threading.Thread):
 				if entry['name'] in local_entries:
 					local_entries.remove(entry['name'])
 			else:
-				self.logger.info('skipped file "' + task['local_path'] + '/' + entry['name'] + '" of unsupported type "' + entry['type'] + '".')
+				self.logger.warning('skipped file "' + task['local_path'] + '/' + entry['name'] + '" of unsupported type "' + entry['type'] + '".')
 
 		for ent_name in local_entries:
 			# untouched local files
@@ -271,16 +271,18 @@ class WorkerThread(threading.Thread):
 						# just fix the record
 						self.entrymgr.update_entry(local_path=local_path, obj=entry)
 					else:
-						self.logger.warning('case1: ' + str(local_mtime) + ',' +
+						# in some cases the API responds with a incorrect file size: http://stackoverflow.com/a/27031491, so this shouldn't be trusted
+						self.logger.warning('case1 (' + local_path + '): ' + str(local_mtime) + ',' +
 											str(local_fsize) + ' vs ' + str(remote_mtime) + ',' + str(entry['size']))
-						new_path = self.resolve_conflict(local_path, self.config.OS_HOSTNAME)
-						if new_path is None:
-							self.logger.critical('cannot rename file "' + local_path + '" to avoid conflict. Skip the conflicting remote file.')
-							return
-						# add the renamed local file to list so as to upload it later
-						local_entries.append(os.path.basename(new_path))
-						# download the remote file to the path
-						self.taskmgr.add_task('dl', local_path, entry['id'], entry['parent_id'], args='add_row,', extra_info=json.dumps(entry))
+						return
+						# new_path = self.resolve_conflict(local_path, self.config.OS_HOSTNAME)
+						# if new_path is None:
+						# 	self.logger.critical('cannot rename file "' + local_path + '" to avoid conflict. Skip the conflicting remote file.')
+						# 	return
+						# # add the renamed local file to list so as to upload it later
+						# local_entries.append(os.path.basename(new_path))
+						# # download the remote file to the path
+						# self.taskmgr.add_task('dl', local_path, entry['id'], entry['parent_id'], args='add_row,', extra_info=json.dumps(entry))
 				else:
 					# we have a previous record for reference
 					if previous_entry['remote_id'] == entry['id']:
@@ -294,7 +296,7 @@ class WorkerThread(threading.Thread):
 						elif local_mtime != remote_mtime or entry['client_updated_time'] != previous_entry['client_updated_time']:
 							# there may be more than one revisions between them
 							# better keep both
-							self.logger.warning('case2: ' + str(local_mtime) + ',' +
+							self.logger.warning('case2 (' + local_path + '): ' + str(local_mtime) + ',' +
 												str(local_fsize) + ' vs ' + str(remote_mtime) + ',' + str(entry['size']))
 							new_path = self.resolve_conflict(local_path, self.config.OS_HOSTNAME)
 							if new_path is None:
@@ -315,7 +317,7 @@ class WorkerThread(threading.Thread):
 						if local_mtime != od_glob.str_to_time(previous_entry['client_updated_time']):
 							# the local file was modified since its last sync
 							# better keep it
-							self.logger.warning('case3: ' + str(local_mtime) + ',' + str(local_fsize) + ' vs ' + str(
+							self.logger.warning('case3 (' + local_path + '): ' + str(local_mtime) + ',' + str(local_fsize) + ' vs ' + str(
 								od_glob.str_to_time(previous_entry['client_updated_time'])) + ',' + str(previous_entry['size']))
 							new_path = self.resolve_conflict(local_path, self.config.OS_HOSTNAME)
 							if new_path is None:
@@ -425,39 +427,44 @@ class WorkerThread(threading.Thread):
 	def run(self):
 		self.taskmgr = od_sqlite.TaskManager()
 		self.entrymgr = od_sqlite.EntryManager()
-		while self.running:		# not self.stop_event.is_set():
-			self.taskmgr.dec_sem()
-			task = self.taskmgr.get_task()
-			if task is None:
-				self.logger.debug('got null task.')
-				continue
+		try:
+			while self.running:		# not self.stop_event.is_set():
+				self.taskmgr.dec_sem()
+				task = self.taskmgr.get_task()
+				if task is None:
+					self.logger.debug('got null task.')
+					continue
 
-			self.logger.debug('got task: %s on "%s"', task['type'], task['local_path'])
+				self.logger.debug('got task: %s on "%s"', task['type'], task['local_path'])
 
-			self.is_busy = True
-			od_inotify_thread.INotifyThread.pause_event.set()
-			if task['type'] == 'sy':
-				self.sync_dir(task)
-			elif task['type'] == 'rm':
-				self.remove_dir(task)
-			elif task['type'] == 'mk':
-				self.make_remote_dir(task)
-			elif task['type'] == 'up':
-				self.upload_file(task)
-			elif task['type'] == 'dl':
-				self.download_file(task)
-			elif task['type'] == 'mv':
-				self.move_remote_entry(task)
-			elif task['type'] == 'rf':
-				self.remove_file(task)
-			elif task['type'] == 'af':
-				pass
-			elif task['type'] == 'cp':
-				pass
-			else:
-				raise Exception('Unknown task type "' + task['type'] + '".')
-			od_inotify_thread.INotifyThread.pause_event.clear()
-			self.is_busy = False
+				self.is_busy = True
+				od_inotify_thread.INotifyThread.pause_event.set()
+				if task['type'] == 'sy':
+					self.sync_dir(task)
+				elif task['type'] == 'rm':
+					self.remove_dir(task)
+				elif task['type'] == 'mk':
+					self.make_remote_dir(task)
+				elif task['type'] == 'up':
+					self.upload_file(task)
+				elif task['type'] == 'dl':
+					self.download_file(task)
+				elif task['type'] == 'mv':
+					self.move_remote_entry(task)
+				elif task['type'] == 'rf':
+					self.remove_file(task)
+				elif task['type'] == 'af':
+					pass
+				elif task['type'] == 'cp':
+					pass
+				else:
+					raise Exception('Unknown task type "' + task['type'] + '".')
+				od_inotify_thread.INotifyThread.pause_event.clear()
+				self.is_busy = False
+		except Exception as e:
+			self.logger.exception('od_unexpected_exception')
+			raise
+			
 		self.taskmgr = None
 		self.entrymgr.close()
 		self.logger.debug('stopped.')

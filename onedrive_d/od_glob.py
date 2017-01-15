@@ -7,6 +7,7 @@ Global variables for onedrive_d.
 import os
 import sys
 import logging
+import logging.handlers
 import atexit
 import json
 from calendar import timegm
@@ -44,7 +45,7 @@ def get_logger(level=logging.DEBUG, file_path=None):
 		logger_instance.setLevel(level)
 		if file_path is not None:
 			logger_instance.propagate = False
-			logger_fh = logging.FileHandler(file_path, 'a')
+			logger_fh = logging.handlers.WatchedFileHandler(file_path, 'a')
 			logger_fh.setLevel(level)
 			logger_instance.addHandler(logger_fh)
 		atexit.register(flush_log_at_shutdown)
@@ -118,8 +119,6 @@ class ConfigSet:
 		'LAST_RUN_TIMESTAMP': '1970-01-01T00:00:00+0000'
 	}
 
-	logger = get_logger()
-
 	OS_HOSTNAME = os.uname()[1]
 	OS_USERNAME = os.getenv('SUDO_USER')
 
@@ -129,9 +128,12 @@ class ConfigSet:
 	def __init__(self, setup_mode=False):
 		# no locking is necessary because the code is run way before multithreading
 		if not ConfigSet.initialized:
-			if ConfigSet.OS_USERNAME is None or ConfigSet.OS_USERNAME == '':
-				ConfigSet.OS_USERNAME = os.getenv('USER')
-			if ConfigSet.OS_USERNAME is None or ConfigSet.OS_USERNAME == '':
+			if not ConfigSet.OS_USERNAME:
+				for env_key in ['USER', 'LOGNAME']:
+					ConfigSet.OS_USERNAME = os.getenv(env_key)
+					if ConfigSet.OS_USERNAME:
+						break
+			if not ConfigSet.OS_USERNAME:
 				get_logger().critical('cannot find current logged-in user.')
 				sys.exit(1)
 			ConfigSet.OS_USER_ID = getpwnam(ConfigSet.OS_USERNAME).pw_uid
@@ -166,7 +168,7 @@ class ConfigSet:
 				self.ignore_list = od_ignore_list.IgnoreList(
 					ConfigSet.APP_IGNORE_FILE, ConfigSet.params['ONEDRIVE_ROOT_PATH'])
 			else:
-				ConfigSet.logger.info('ignore list file was not found.')
+				get_logger().info('ignore list file was not found.')
 				ConfigSet.ignore_list = None
 
 	def set_root_path(self, path):

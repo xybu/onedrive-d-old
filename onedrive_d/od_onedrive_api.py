@@ -28,6 +28,10 @@ import requests
 from time import sleep
 from . import od_glob
 from . import od_thread_manager
+try:
+	from requests.packages.urllib3.exceptions import InsecureRequestWarning
+except:
+	pass
 
 api_instance = None
 
@@ -96,6 +100,10 @@ class OneDriveAPI:
 	threadman = od_thread_manager.get_instance()
 
 	def __init__(self, client_id, client_secret, client_scope=CLIENT_SCOPE, redirect_uri=REDIRECT_URI):
+		try:
+			requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+		except:
+			pass
 		self.client_access_token = None
 		self.client_refresh_token = None
 		self.client_id = client_id
@@ -188,7 +196,8 @@ class OneDriveAPI:
 			self.set_refresh_token(response['refresh_token'])
 			self.set_user_id(response['user_id'])
 			return response
-		except requests.exceptions.ConnectionError:
+		except requests.exceptions.ConnectionError as e:
+			self.logger.exception(e);
 			self.logger.info('network connection error.')
 			self.threadman.hang_caller()
 			return self.get_access_token(code, uri)
@@ -203,24 +212,26 @@ class OneDriveAPI:
 		}
 		while True:
 			try:
-				request = requests.post(OneDriveAPI.OAUTH_TOKEN_URI, data=params)
+				request = requests.post(OneDriveAPI.OAUTH_TOKEN_URI, data=params, verify=False)
 				response = self.parse_response(request, OneDriveAPIException)
 				self.set_access_token(response['access_token'])
 				self.set_refresh_token(response['refresh_token'])
 				self.set_user_id(response['user_id'])
 				return response
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
 
 	def sign_out(self):
 		while True:
 			try:
-				r = self.http_client.get(OneDriveAPI.OAUTH_SIGNOUT_URI + '?client_id=' + self.client_id + '&redirect_uri=' + self.client_redirect_uri)
+				r = self.http_client.get(OneDriveAPI.OAUTH_SIGNOUT_URI + '?client_id=' + self.client_id + '&redirect_uri=' + self.client_redirect_uri, verify=False)
 				return self.parse_response(r, OneDriveAuthError)
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
 
@@ -230,11 +241,12 @@ class OneDriveAPI:
 	def get_quota(self, user_id='me'):
 		while True:
 			try:
-				r = self.http_client.get(OneDriveAPI.API_URI + user_id + '/skydrive/quota')
+				r = self.http_client.get(OneDriveAPI.API_URI + user_id + '/skydrive/quota', verify=False)
 				return self.parse_response(r, OneDriveAPIException)
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
 
@@ -243,12 +255,13 @@ class OneDriveAPI:
 
 	def get_property(self, entry_id='me/skydrive'):
 		try:
-			r = self.http_client.get(OneDriveAPI.API_URI + entry_id)
+			r = self.http_client.get(OneDriveAPI.API_URI + entry_id, verify=False)
 			return self.parse_response(r, OneDriveAPIException)
 		except OneDriveAuthError:
 			self.auto_recover_auth_error()
 			return self.get_property(entry_id)
-		except requests.exceptions.ConnectionError:
+		except requests.exceptions.ConnectionError as e:
+			self.logger.exception(e);
 			self.logger.info('network connection error.')
 			self.threadman.hang_caller()
 			return self.get_property(entry_id)
@@ -266,11 +279,12 @@ class OneDriveAPI:
 		while True:
 			try:
 				r = self.http_client.put(
-					OneDriveAPI.API_URI + entry_id, data=json.dumps(kwargs), headers=headers)
+					OneDriveAPI.API_URI + entry_id, data=json.dumps(kwargs), headers=headers, verify=False)
 				return self.parse_response(r, OneDriveAPIException)
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
 
@@ -288,11 +302,12 @@ class OneDriveAPI:
 
 		while True:
 			try:
-				r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/' + type)
+				r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/' + type, verify=False)
 				return self.parse_response(r, OneDriveAPIException)['source']
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
 
@@ -302,11 +317,12 @@ class OneDriveAPI:
 		"""
 		while True:
 			try:
-				r = self.http_client.get(OneDriveAPI.API_URI + folder_id + '/' + type)
+				r = self.http_client.get(OneDriveAPI.API_URI + folder_id + '/' + type, verify=False)
 				return self.parse_response(r, OneDriveAPIException)['data']
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
 			except OneDriveServerInternalError as e:
@@ -324,11 +340,12 @@ class OneDriveAPI:
 		uri = OneDriveAPI.API_URI + parent_id
 		while True:
 			try:
-				r = self.http_client.post(uri, data=json.dumps(data), headers=headers)
+				r = self.http_client.post(uri, data=json.dumps(data), headers=headers, verify=False)
 				return self.parse_response(r, OneDriveAPIException, requests.codes.created)
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
 
@@ -346,14 +363,15 @@ class OneDriveAPI:
 		}
 		uri = OneDriveAPI.API_URI + target_id + '?overwrite=' + str(overwrite)
 		req = requests.Request(
-			type, uri, data=json.dumps(data), headers=headers).prepare()
+			type, uri, data=json.dumps(data), headers=headers, verify=False).prepare()
 		while True:
 			try:
 				r = self.http_client.send(req)
 				return self.parse_response(r, OneDriveAPIException, requests.codes.created)
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
 			except OneDriveServerInternalError as e:
@@ -411,14 +429,14 @@ class OneDriveAPI:
 		# BITS: Create-Session
 		headers = {
 			'X-Http-Method-Override': 'BITS_POST',
-			'Content-Length': 0,
+			'Content-Length': '0',
 			'BITS-Packet-Type': 'Create-Session',
 			'BITS-Supported-Protocols': '{7df0354d-249b-430f-820d-3d2a9bef4931}'
 		}
 		self.logger.debug('getting session token for BITS upload...')
 		while True:
 			try:
-				response = self.http_client.request('post', url, headers=headers)
+				response = self.http_client.request('post', url, headers=headers, verify=False)
 				if response.status_code != 201:
 					if 'www-authenticate' in response.headers and 'invalid_token' in response.headers['www-authenticate']:
 						response.close()
@@ -434,7 +452,8 @@ class OneDriveAPI:
 				break
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
 		del headers
@@ -456,7 +475,7 @@ class OneDriveAPI:
 					'BITS-Packet-Type': 'Fragment',
 					'BITS-Session-Id': session_id,
 					'Content-Range': 'bytes {}-{}/{}'.format(source_cursor, target_cursor, source_size)
-				})
+				}, verify=False)
 				if response.status_code != requests.codes.ok:
 					# unknown error. better log it for future analysis
 					self.logger.debug('an error occurred uploading the block. HTTP %d.', response.status_code)
@@ -471,7 +490,8 @@ class OneDriveAPI:
 					response.close()
 					del data
 					# sleep(1)
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				del data
 				self.threadman.hang_caller()
@@ -493,11 +513,11 @@ class OneDriveAPI:
 			'X-Http-Method-Override': 'BITS_POST',
 			'BITS-Packet-Type': 'Close-Session',
 			'BITS-Session-Id': session_id,
-			'Content-Length': 0
+			'Content-Length': '0'
 		}
 		while True:
 			try:
-				response = self.http_client.request('post', url, headers=headers)
+				response = self.http_client.request('post', url, headers=headers, verify=False)
 				if response.status_code != requests.codes.ok and response.status_code != requests.codes.created:
 					# when token expires, server return HTTP 500
 					# www-authenticate: 'Bearer realm="OneDriveAPI", error="expired_token", error_description="Auth token expired. Try refreshing."'
@@ -517,7 +537,8 @@ class OneDriveAPI:
 				return self.get_property('file.' + res_id[:res_id.index('!')] + '.' + res_id)
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
 
@@ -569,7 +590,7 @@ class OneDriveAPI:
 
 		while True:
 			try:
-				r = self.http_client.put(uri, data=data)
+				r = self.http_client.put(uri, data=data, verify=False)
 				ret = r.json()
 				if r.status_code != requests.codes.ok and r.status_code != requests.codes.created:
 					# TODO: try testing this
@@ -580,7 +601,8 @@ class OneDriveAPI:
 				return self.get_property(ret['id'])
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
 			except OneDriveServerInternalError as e:
@@ -603,7 +625,7 @@ class OneDriveAPI:
 				r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/content',
 					headers={
 						'Range': 'bytes={0}-{1}'.format(cursor, target)
-					})
+					}, verify=False)
 				if r.status_code == requests.codes.ok or r.status_code == requests.codes.partial:
 					# sample data: 'bytes 12582912-12927920/12927921'
 					range_unit, range_str = r.headers['content-range'].split(' ')
@@ -623,7 +645,8 @@ class OneDriveAPI:
 					# return False
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
 		f.close()
@@ -631,6 +654,10 @@ class OneDriveAPI:
 		# fcntl.lockf(f, fcntl.LOCK_UN)
 		return True
 
+	def get_size(self, entry_id):
+		r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/content', verify=False)
+		self.logger.info('filesize ' + entry_id + ' size is: ' + r.headers['content-length'])
+	
 	def get(self, entry_id, local_path=None):
 		"""
 		Fetching content of OneNote files will raise OneDriveAPIException:
@@ -638,7 +665,7 @@ class OneDriveAPI:
 		"""
 		while True:
 			try:
-				r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/content')
+				r = self.http_client.get(OneDriveAPI.API_URI + entry_id + '/content', verify=False)
 				if r.status_code != requests.codes.ok:
 					ret = r.json()
 					# TODO: try testing this
@@ -654,7 +681,8 @@ class OneDriveAPI:
 					return r.content
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
 			except OneDriveServerInternalError as e:
@@ -667,9 +695,10 @@ class OneDriveAPI:
 		"""
 		while True:
 			try:
-				self.http_client.delete(OneDriveAPI.API_URI + entry_id)
+				self.http_client.delete(OneDriveAPI.API_URI + entry_id, verify=False)
 				return
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
 			except OneDriveServerInternalError as e:
@@ -679,21 +708,23 @@ class OneDriveAPI:
 	def get_user_info(self, user_id='me'):
 		while True:
 			try:
-				r = self.http_client.get(OneDriveAPI.API_URI + user_id)
+				r = self.http_client.get(OneDriveAPI.API_URI + user_id, verify=False)
 				return self.parse_response(r, OneDriveAPIException, requests.codes.ok)
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
 
 	def get_contact_list(self, user_id='me'):
 		while True:
 			try:
-				r = self.http_client.get(OneDriveAPI.API_URI + user_id + '/friends')
+				r = self.http_client.get(OneDriveAPI.API_URI + user_id + '/friends', verify=False)
 				return self.parse_response(r, OneDriveAPIException, requests.codes.ok)
 			except OneDriveAuthError:
 				self.auto_recover_auth_error()
-			except requests.exceptions.ConnectionError:
+			except requests.exceptions.ConnectionError as e:
+				self.logger.exception(e);
 				self.logger.info('network connection error.')
 				self.threadman.hang_caller()
