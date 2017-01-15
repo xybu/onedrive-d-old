@@ -1,11 +1,9 @@
 onedrive-d
 ==========
 
+# Keep an eye on https://github.com/xybu/onedrived-dev.
+
 A Microsoft OneDrive desktop client / daemon on Linux, written in Python 3.
-
-## Note for this branch
-
-This branch experiments with daemonization of onedrive-d process.
 
 ## Install
 
