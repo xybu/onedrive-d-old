@@ -65,8 +65,12 @@ class Monitor:
 			ignore_list=self.config.ignore_list)
 		self.inotify_thread.start()
 
+	def sig_usr1_handler(self, sig_num=None, stack_frame=None):
+		self.logger.info("Got a SIGUSR1. Force synchronization (waking up the heart_beat())")
+
 	def heart_beat(self):
 		self.entrymgr = od_sqlite.EntryManager()
+		signal.signal(signal.SIGUSR1, self.sig_usr1_handler)
 		while True:
 			# self.taskmgr.add_task(**{
 			# 	'type': 'sy',

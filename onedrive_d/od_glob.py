@@ -9,6 +9,8 @@ import sys
 import logging
 import atexit
 import json
+import argparse
+
 from calendar import timegm
 from datetime import timezone, datetime, timedelta
 from pwd import getpwnam
@@ -37,16 +39,18 @@ def get_config_instance(force=False, setup_mode=False):
 
 
 def get_logger(level=logging.DEBUG, file_path=None):
+	logformat = '[%(asctime)-15s] %(levelname)s: %(threadName)s: %(message)s'
 	global logger_instance
 	if logger_instance is None:
-		logging.basicConfig(format='[%(asctime)-15s] %(levelname)s: %(threadName)s: %(message)s')
+		logging.basicConfig(format=logformat)
 		logger_instance = logging.getLogger(__name__)
 		logger_instance.setLevel(level)
-		if file_path is not None:
-			logger_instance.propagate = False
-			logger_fh = logging.FileHandler(file_path, 'a')
-			logger_fh.setLevel(level)
-			logger_instance.addHandler(logger_fh)
+	if file_path is not None:
+		logger_instance.propagate = False
+		logger_fh = logging.FileHandler(file_path, 'a')
+		logger_fh.setLevel(level)
+		logger_fh.setFormatter(logging.Formatter(logformat))
+		logger_instance.addHandler(logger_fh)
 		atexit.register(flush_log_at_shutdown)
 	return logger_instance
 
@@ -127,7 +131,26 @@ class ConfigSet:
 	is_dirty = False
 
 	def __init__(self, setup_mode=False):
+#		parser = argparse.ArgumentParser()
+#		parser.add_argument('--f', default='.onedrive', metavar='configdirectory',
+#			help='specify the configuration files location (inside the home directory). Default: .onedrive')
+		#parser.add_argument('--a', choices=['start', 'stop', 'restart', 'status'], help='action')
+#		parser.add_argument('action')
+#		parser.add_argument('-debug')
+#		args = parser.parse_args()
+
 		# no locking is necessary because the code is run way before multithreading
+		conf = False
+		confDir = None
+		for arg in sys.argv:
+			if arg == '--f':
+				conf = True
+			else:
+				if conf == True:
+					confDir = arg
+					conf = False
+		if confDir is None:
+			confDir = '.onedrive'
 		if not ConfigSet.initialized:
 			if ConfigSet.OS_USERNAME is None or ConfigSet.OS_USERNAME == '':
 				ConfigSet.OS_USERNAME = os.getenv('USER')
@@ -136,7 +159,7 @@ class ConfigSet:
 				sys.exit(1)
 			ConfigSet.OS_USER_ID = getpwnam(ConfigSet.OS_USERNAME).pw_uid
 			ConfigSet.OS_HOME_PATH = os.path.expanduser('~' + ConfigSet.OS_USERNAME)
-			ConfigSet.APP_CONF_PATH = ConfigSet.OS_HOME_PATH + '/.onedrive'
+			ConfigSet.APP_CONF_PATH = ConfigSet.OS_HOME_PATH + '/' + confDir
 			if not os.path.exists(ConfigSet.APP_CONF_PATH):
 				get_logger().critical('onedrive-d may not be installed properly. Exit.')
 				sys.exit(1)

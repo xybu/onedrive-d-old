@@ -32,8 +32,8 @@ class INotifyThread(threading.Thread):
 
 	def parse_record(self, row):
 
-		if INotifyThread.pause_event.is_set():
-			return
+#		if INotifyThread.pause_event.is_set():
+#			return
 
 		path, event, name = row
 
@@ -124,7 +124,7 @@ class INotifyThread(threading.Thread):
 			return
 
 		inotify_args = ['inotifywait', '-e',
-			'unmount,close_write,delete,move,isdir', '-cmr', self.root_path]
+			'unmount,close_write,delete,move,isdir', '--format', '"%w","%e","%f"', '-mr', self.root_path]
 		# if len(self.config.ignore_list.ignore_names) > 0:
 		# 	ignore_list = []
 		# 	for item in self.config.ignore_list.ignore_names:
@@ -141,7 +141,7 @@ class INotifyThread(threading.Thread):
 			line = self.subp.stdout.readline().decode('utf-8').strip()
 			if line == '':
 				sleep(1)
-			elif line[0] == '/':
+			elif line[0] == '"':
 				csv_rows = csv.reader(line.split('\n'))
 				for row in csv_rows:
 					self.parse_record(row)

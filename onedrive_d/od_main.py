@@ -5,9 +5,14 @@ Main entry of onedrive-d.
 """
 
 import sys
+import os
+
 import click
 import daemonocle
 from . import od_glob
+
+if __import__('locale').getpreferredencoding() == 'ANSI_X3.4-1968':
+	os.environ["LC_ALL"] = "en_US.UTF-8"
 
 # this runs before any daemonocle code
 config = od_glob.get_config_instance()
@@ -22,6 +27,8 @@ if not is_debug_mode:
 
 
 @click.command(cls=daemonocle.cli.DaemonCLI, daemon_params={'pidfile': config.APP_CONF_PATH + '/onedrive.pid'})
+@click.option('--f', default='.onedrive')
+@click.option('--debug/--no-debug', default=False)
 def main():
 	mon = None
 	if not config.params['USE_GUI']:
