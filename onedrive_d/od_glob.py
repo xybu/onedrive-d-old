@@ -129,9 +129,12 @@ class ConfigSet:
 	def __init__(self, setup_mode=False):
 		# no locking is necessary because the code is run way before multithreading
 		if not ConfigSet.initialized:
-			if ConfigSet.OS_USERNAME is None or ConfigSet.OS_USERNAME == '':
-				ConfigSet.OS_USERNAME = os.getenv('USER')
-			if ConfigSet.OS_USERNAME is None or ConfigSet.OS_USERNAME == '':
+			if not ConfigSet.OS_USERNAME:
+				for env_key in ['USER', 'LOGNAME']:
+					ConfigSet.OS_USERNAME = os.getenv(env_key)
+					if ConfigSet.OS_USERNAME:
+						break
+			if not ConfigSet.OS_USERNAME:
 				get_logger().critical('cannot find current logged-in user.')
 				sys.exit(1)
 			ConfigSet.OS_USER_ID = getpwnam(ConfigSet.OS_USERNAME).pw_uid
