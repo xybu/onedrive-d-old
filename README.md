@@ -25,7 +25,7 @@ rm -rfv ~/.onedrive
 
 ```bash
 git clone https://github.com/xybu/onedrive-d-old.git
-cd onedrive-d
+cd onedrive-d-old
 ```
 
 Or you can browse https://github.com/xybu/onedrive-d-old and download the ZIP file manually.
